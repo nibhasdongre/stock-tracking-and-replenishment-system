@@ -2,17 +2,36 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function MonthSelector() {
   const now = new Date();
-  const [month, setMonth] = useState<Date | undefined>(now);
+  const [mm, setMm] = useState(() => String(now.getMonth() + 1).padStart(2, "0"));
+  const [yyyy, setYyyy] = useState(() => String(now.getFullYear()));
+  const [touched, setTouched] = useState(false);
   const navigate = useNavigate();
 
-  // Allow a wider navigation by years/months
-  const minDate = new Date("2010-01-01");
-  const maxDate = new Date("2050-12-31");
+  // Allowed range for year
+  const minYear = 2010;
+  const maxYear = 2050;
+
+  // Simple validators
+  const monthNum = Number(mm);
+  const yearNum = Number(yyyy);
+  const isMonthValid = mm.length === 2 && monthNum >= 1 && monthNum <= 12;
+  const isYearValid = yyyy.length === 4 && yearNum >= minYear && yearNum <= maxYear;
+  const validInput = isMonthValid && isYearValid;
+
+  function handleChooseMonth() {
+    if (validInput) {
+      // Create date string as yyyy-MM for consistency
+      const formatted = `${yyyy}-${mm}`;
+      navigate(`/current?month=${encodeURIComponent(formatted)}`);
+    } else {
+      setTouched(true);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-3">
@@ -34,23 +53,44 @@ export default function MonthSelector() {
         >
           Summarize
         </Button>
-        <div>
-          <Calendar
-            mode="single"
-            selected={month}
-            onSelect={setMonth}
-            className="pointer-events-auto p-1"
-            fromMonth={minDate}
-            toMonth={maxDate}
-            // This prop displays month/year picker (hover/click on caption)
-            captionLayout="dropdown"
-            onMonthChange={setMonth}
-          />
+        <div className="flex flex-col mt-4 gap-2">
+          <div>
+            <label className="block mb-1 text-sm font-medium text-gray-700">Enter Month & Year:</label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={mm}
+                onChange={e => setMm(e.target.value.replace(/\D/g, ""))}
+                placeholder="MM"
+                className="w-14"
+                aria-label="Month"
+                onBlur={() => setTouched(true)}
+              />
+              <span className="text-xl font-semibold">/</span>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={4}
+                value={yyyy}
+                onChange={e => setYyyy(e.target.value.replace(/\D/g, ""))}
+                placeholder="YYYY"
+                className="w-20"
+                aria-label="Year"
+                onBlur={() => setTouched(true)}
+              />
+            </div>
+            {touched && (!isMonthValid || !isYearValid) && (
+              <p className="text-sm text-destructive mt-1 transition-colors">
+                Please enter a valid month (01–12) and year ({minYear}–{maxYear}).
+              </p>
+            )}
+          </div>
           <Button
             className="mt-2 text-base"
-            onClick={() =>
-              month && navigate(`/current?month=${encodeURIComponent(format(month, "yyyy-MM"))}`)
-            }
+            disabled={!validInput}
+            onClick={handleChooseMonth}
           >
             Choose Month
           </Button>
