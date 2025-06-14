@@ -101,13 +101,16 @@ export default function VisualizationPage() {
       { name: "Product Sigma", value: 1900 },
     ],
   };
-  const summaryTableData = [
+
+  // Renamed this variable to avoid redeclaration error
+  const demoSummaryTableData = [
     { name: "Product Beta", quantity: 401, sales: 12050 },
     { name: "Product Alpha", quantity: 389, sales: 11700 },
     { name: "Product Gamma", quantity: 318, sales: 10680 },
     { name: "Product Delta", quantity: 283, sales: 10290 },
     { name: "Product Zeta", quantity: 269, sales: 9850 },
   ];
+
   const currentDateString = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
   // PDF Export
@@ -207,8 +210,12 @@ export default function VisualizationPage() {
     quantity: getRandomInt(25, 300),
   }));
 
-  // For summary table (Top5+Bottom5)
-  const summaryTableData = [...top5, ...bottom5.filter(item => !top5.some(t => t.name === item.name))];
+  // For summary table (Top5+Bottom5 with category for PDF)
+  // This ensures that rows always include category (as required for the table)
+  const summaryTableData = [
+    ...top5,
+    ...bottom5.filter(item => !top5.some(t => t.name === item.name)),
+  ];
 
   return (
     <div className="min-h-screen py-10 bg-background flex flex-col items-center">
@@ -261,7 +268,7 @@ export default function VisualizationPage() {
                 </tr>
               </thead>
               <tbody>
-                {summaryTableData.map((row, i) => (
+                {demoSummaryTableData.map((row, i) => (
                   <tr key={i} className="bg-black/70 border-b last:border-0">
                     <td className="p-2">{row.name}</td>
                     <td className="p-2">{row.category}</td>
