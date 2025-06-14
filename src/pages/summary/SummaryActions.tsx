@@ -55,6 +55,7 @@ export default function SummaryActions({
         />
       </div>
       <div className="flex flex-row gap-2 mt-1 sm:mt-0 justify-end">
+        {/* Only ONE Visualize Button */}
         <Button
           variant="outline"
           className="border-cosmic-gold text-cosmic-gold font-semibold px-5 whitespace-nowrap"
@@ -64,6 +65,7 @@ export default function SummaryActions({
           <BarChartHorizontal className="w-4 mr-1" />
           Visualize
         </Button>
+        {/* Single Download Button */}
         {visibleReportType !== "none" && (
           <Button
             className="bg-cosmic-gold text-black font-semibold hover:bg-cosmic-blue hover:text-cosmic-gold whitespace-nowrap flex items-center"

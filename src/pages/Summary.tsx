@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import StarBackground from "@/components/StarBackground";
 import SummaryMatrix from "@/components/SummaryMatrix";
@@ -97,15 +96,22 @@ export default function Summary() {
     subTitle = `Year: ${annualYear}`;
   }
 
+  // Helper for offscreen export containers
+  const [exportAreaVisible, setExportAreaVisible] = React.useState(false);
+
   // PDF export
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
     setExporting(true);
+    setExportAreaVisible(true); // Make chart refs visible for canvas capture!
+    await new Promise(r => setTimeout(r, 100)); // Allow hidden DOM to render
+
     try {
       const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       let y = 40;
 
+      // Title section
       doc.setFontSize(18);
       doc.setTextColor("#1566B8");
       doc.text(tableTitle, pageWidth / 2, y, { align: "center" });
@@ -119,7 +125,7 @@ export default function Summary() {
       doc.text(subTitle, pageWidth / 2, y, { align: "center" });
       y += 24;
 
-      // Matrix
+      // Matrix (Top & Bottom 5s)
       if (summaryMatrixRef.current) {
         y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
       }
@@ -127,7 +133,7 @@ export default function Summary() {
       if (summaryTableRef.current) {
         y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
       }
-      // Visualizations
+      // Visualizations (Pie, Bar, Line)
       if (pieRef.current) {
         doc.addPage(); let vizY = 60;
         vizY = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 400, 230, vizY, {center: true});
@@ -146,8 +152,12 @@ export default function Summary() {
           ? `Summary_${month}-${year}.pdf`
           : `Summary_${annualYear}.pdf`
       );
+    } catch (e) {
+      console.error("PDF Export error:", e);
+      alert("PDF Export failed. Please retry.");
     } finally {
       setExporting(false);
+      setExportAreaVisible(false);
     }
   };
 
@@ -181,22 +191,36 @@ export default function Summary() {
             />
           </div>
         )}
-        {/* Hidden Visual Chart Refs for PDF export */}
-        <div style={{ display: "none" }}>
-          <div ref={pieRef}>
-            <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
+
+        {/* Visualization Export Offscreen Area */}
+        {exportAreaVisible && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '-999px',
+              left: '-999px',
+              width: '1200px',
+              background: '#fff',
+              zIndex: 99999,
+              pointerEvents: 'none',
+              opacity: 1
+            }}
+          >
+            <div ref={pieRef} style={{padding: 24, background: '#fff'}} >
+              <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
+            </div>
+            <div ref={barRef} style={{padding: 24, background: '#fff'}} >
+              <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
+            </div>
+            <div ref={lineRef} style={{padding: 24, background: '#fff'}} >
+              <MainLineChart
+                products={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))}
+                mode="quantity"
+                trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
+              />
+            </div>
           </div>
-          <div ref={barRef}>
-            <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
-          </div>
-          <div ref={lineRef}>
-            <MainLineChart
-              products={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))}
-              mode="quantity"
-              trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
-            />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
