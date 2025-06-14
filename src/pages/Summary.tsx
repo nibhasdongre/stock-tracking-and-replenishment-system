@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { CalendarIcon, BarChartHorizontal, Download } from "lucide-react";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -67,23 +68,56 @@ export default function Summary() {
 
   const reportTableRef = useRef<HTMLDivElement>(null);
 
-  // Simple PDF export for visible table (uses jsPDF html method)
+  // Modified PDF export using jsPDF + autoTable for full table capture
   const handleDownloadPdf = () => {
-    if (reportTableRef.current) {
-      const doc = new jsPDF();
-      doc.html(reportTableRef.current, {
-        callback: function (doc) {
-          doc.save(
-            visibleReportType === "monthly"
-              ? `monthly-report-${month}-${year}.pdf`
-              : `annual-report-${annualYear}.pdf`
-          );
-        },
-        x: 10,
-        y: 10,
-        width: 180
-      });
+    let tableTitle = "";
+    let tableData: { name: string; quantity: number; sales: number }[] = [];
+    if (visibleReportType === "monthly") {
+      tableTitle = `Monthly Report for ${month}-${year}`;
+      tableData = dummyMonthlyReport;
+    } else if (visibleReportType === "annual") {
+      tableTitle = `Annual Report for ${annualYear}`;
+      tableData = dummyAnnualReport;
+    } else {
+      return;
     }
+
+    const doc = new jsPDF();
+
+    // Add table title
+    doc.setFontSize(16);
+    doc.text(tableTitle, 14, 18);
+
+    // Build row data for autoTable
+    const headers = [["Product", "Quantity", "Sales"]];
+    const rows = tableData.map(row => [row.name, row.quantity, row.sales]);
+
+    autoTable(doc, {
+      startY: 26,
+      head: headers,
+      body: rows,
+      headStyles: {
+        fillColor: [33, 150, 243], // cosmic-blue
+        textColor: [0, 0, 0],
+        halign: "center",
+        fontStyle: "bold",
+      },
+      bodyStyles: {
+        halign: "center",
+      },
+      styles: {
+        minCellHeight: 10,
+        fontSize: 11,
+      },
+      theme: "striped",
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save(
+      visibleReportType === "monthly"
+        ? `monthly-report-${month}-${year}.pdf`
+        : `annual-report-${annualYear}.pdf`
+    );
   };
 
   return (
