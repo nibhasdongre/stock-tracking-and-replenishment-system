@@ -10,6 +10,10 @@ export default function MonthSelector() {
   const [month, setMonth] = useState<Date | undefined>(now);
   const navigate = useNavigate();
 
+  // Allow a wider navigation by years/months
+  const minDate = new Date("2010-01-01");
+  const maxDate = new Date("2050-12-31");
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-3">
       <h2 className="text-3xl font-bold mb-6">
@@ -36,11 +40,17 @@ export default function MonthSelector() {
             selected={month}
             onSelect={setMonth}
             className="pointer-events-auto p-1"
+            fromMonth={minDate}
+            toMonth={maxDate}
+            // This prop displays month/year picker (hover/click on caption)
+            captionLayout="dropdown"
             onMonthChange={setMonth}
           />
           <Button
             className="mt-2 text-base"
-            onClick={() => month && navigate(`/current?month=${encodeURIComponent(format(month, "yyyy-MM"))}`)}
+            onClick={() =>
+              month && navigate(`/current?month=${encodeURIComponent(format(month, "yyyy-MM"))}`)
+            }
           >
             Choose Month
           </Button>
