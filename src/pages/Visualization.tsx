@@ -1,10 +1,10 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, Legend, Cell, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 
 // Dummy categories and product names
 const categories = ["Electronics", "Apparel", "Toys", "Home", "Books"];
@@ -16,9 +16,8 @@ const productList = [
 const getRandomInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
-// Dummy data for charts (Top/Bottom 5 by quantity/sales, and dummy yearly trend)
+// Dummy data generator (Top/Bottom 5 by quantity/sales)
 const chartsDummy = (mode: "sales" | "quantity") => {
-  // Generate top 5 and bottom 5
   let sorted = productList.map((name, idx) => ({
     name,
     category: categories[idx % categories.length],
@@ -28,16 +27,21 @@ const chartsDummy = (mode: "sales" | "quantity") => {
   sorted = sorted.sort((a, b) =>
     mode === "sales" ? b.sales - a.sales : b.quantity - a.quantity
   );
+  const top5 = sorted.slice(0, 5);
+  const bottom5 = sorted.slice(-5).reverse();
+  // Combine top5 and bottom5, de-duplicated
+  const combined = [...top5, ...bottom5.filter(item => !top5.some(t => t.name === item.name))];
   return {
-    top5: sorted.slice(0, 5),
-    bottom5: sorted.slice(-5).reverse(),
+    top5,
+    bottom5,
+    combined,
     all: sorted,
   };
 };
 
 const pieColors = ["#4884d8", "#d8a448", "#6ed84d", "#e04db7", "#4dc9d8", "#fd5050"];
 
-// Dummy sales/qty trend data throughout a year
+// Trend data generator
 const trendDummy = (products: string[]) => {
   const months = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -45,7 +49,7 @@ const trendDummy = (products: string[]) => {
   ];
   return months.map(month => {
     const entry: any = { month };
-    products.forEach((product, idx) => {
+    products.forEach(product => {
       entry[product] = getRandomInt(3000, 16000);
     });
     return entry;
@@ -57,9 +61,9 @@ export default function Visualization() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [customViz, setCustomViz] = useState(false);
 
-  const { top5, bottom5, all } = chartsDummy(mode);
+  const { top5, bottom5, combined } = chartsDummy(mode);
 
-  // Custom Visualization : allow up to 10 products
+  // Custom Visualization: allow up to 10 products
   const handleProductToggle = (product: string) => {
     setSelectedProducts(prev =>
       prev.includes(product)
@@ -72,116 +76,93 @@ export default function Visualization() {
 
   const selectedTrend = trendDummy(selectedProducts);
 
-  // PDF Export w/ all visuals
-  const handleDownloadPdf = () => {
+  // Refs for capturing charts
+  const mainPieRef = useRef<HTMLDivElement>(null);
+  const mainBarRef = useRef<HTMLDivElement>(null);
+  const mainLineRef = useRef<HTMLDivElement>(null);
+  const customPieRef = useRef<HTMLDivElement>(null);
+  const customBarRef = useRef<HTMLDivElement>(null);
+  const customLineRef = useRef<HTMLDivElement>(null);
+
+  // PDF Export with images
+  const handleDownloadPdf = async () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 30;
 
     doc.setFontSize(20);
     doc.setTextColor("#1566B8");
-    doc.text("Visualizations Report", pageWidth/2, y, { align: "center" });
+    doc.text("Visualizations Report", pageWidth / 2, y, { align: "center" });
 
-    y += 24;
+    y += 30;
     doc.setFontSize(12);
     doc.setTextColor("#111");
-    doc.text(`Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)} | Generated: ${(new Date()).toLocaleDateString()}`, pageWidth/2, y, { align: "center" });
-    y += 24;
+    doc.text(`Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)} | Generated: ${(new Date()).toLocaleDateString()}`, pageWidth / 2, y, { align: "center" });
+    y += 28;
 
-    // Top 5/Bot 5 table
-    autoTable(doc, {
-      startY: y,
-      head: [[`Top 5 Products by ${mode.charAt(0).toUpperCase()+mode.slice(1)}`, `Bottom 5 Products by ${mode.charAt(0).toUpperCase()+mode.slice(1)}`]],
-      body: Array.from({length: 5}).map((_, i) => [
-        top5[i] ? `${top5[i].name} (${top5[i].category}) - ${top5[i][mode]}` : "",
-        bottom5[i] ? `${bottom5[i].name} (${bottom5[i].category}) - ${bottom5[i][mode]}` : "",
-      ]),
-      theme: "grid",
-      styles: { fontSize: 11 },
-      tableWidth: pageWidth - 80,
-      margin: { left: 40, right: 40 },
-    });
+    // Helper to capture images and add to PDF
+    const renderAndAdd = async (element: HTMLDivElement | null, title: string, maxW: number, maxH: number, gap: number = 10) => {
+      if (!element) return;
+      // @ts-ignore
+      const canvas = await html2canvas(element, { backgroundColor: "#18181b", scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      let imgWidth = canvas.width;
+      let imgHeight = canvas.height;
 
-    y = (doc as any).lastAutoTable.finalY + 16;
+      // Fit image in the given bounding box (maxW, maxH)
+      if (imgWidth > maxW) {
+        const scale = maxW / imgWidth;
+        imgWidth = maxW;
+        imgHeight = imgHeight * scale;
+      }
+      if (imgHeight > maxH) {
+        const scale = maxH / imgHeight;
+        imgHeight = maxH;
+        imgWidth = imgWidth * scale;
+      }
 
-    // Pie Chart description
-    doc.setFontSize(14);
-    doc.setTextColor("#4884d8");
-    doc.text("Pie Chart: Product Category Distribution (Top 5)", 55, y);
-    y += 14;
-    // Statically render legend - no image/chart
-    top5.forEach((item, i) => {
-      doc.setFontSize(11);
-      doc.setTextColor(pieColors[i%pieColors.length]);
-      doc.text(`${item.name} - ${item.category}: ${item[mode]}`, 55, y);
-      y += 14;
-    });
-    y += 10;
+      // Add title
+      doc.setFontSize(13);
+      doc.setTextColor("#1566B8");
+      doc.text(title, 55, y);
+      y += 16;
 
-    // Histogram description
-    doc.setFontSize(14);
-    doc.setTextColor("#e07d4d");
-    doc.text(`Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5)`, 55, y);
-    y += 14;
-    top5.forEach(item => {
-      doc.setFontSize(11);
-      doc.setTextColor("#222");
-      doc.text(`${item.name}: ${item[mode]}`, 55, y);
-      y += 12;
-    });
-    y += 8;
+      doc.addImage(imgData, "PNG", 55, y, imgWidth, imgHeight, undefined, "FAST");
+      y += imgHeight + gap;
+    };
 
-    // Line Chart description
-    doc.setFontSize(14);
-    doc.setTextColor("#4dc9d8");
-    doc.text("Line Chart: Yearly Sales Trend for Top 5 Products", 55, y);
-    y += 14;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    months.forEach((mon, idx) => {
-      let line = `${mon}: `;
-      top5.forEach(item => {
-        line += `${item.name.split(" ")[1]} ${getRandomInt(1000, 14000)}, `;
-      });
-      doc.setFontSize(9);
-      doc.setTextColor("#222");
-      doc.text(line.slice(0, -2), 55, y);
-      y += 10;
-    });
-    y += 16;
+    // Default Visualizations (Top & Bottom 5)
+    await renderAndAdd(mainPieRef.current, `Pie Chart: Product Category Distribution (Top 5 & Bottom 5)`, 340, 220, 12);
+    await renderAndAdd(mainBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)`, 340, 220, 12);
+    await renderAndAdd(mainLineRef.current, `Line Chart: Annual Trend per Product (Top 5 & Bottom 5)`, 700, 260, 22);
 
     // Custom Visualization if present
     if (customViz && selectedProducts.length > 0) {
-      doc.setFontSize(15);
+      doc.setFontSize(14);
       doc.setTextColor("#1aaf81");
-      doc.text("Custom Visualization (Selected Products):", 55, y);
+      doc.text("Custom Visualization", 55, y);
       y += 16;
 
-      // Table of selected products
-      autoTable(doc, {
-        startY: y,
-        head: [["Product", "Category"]],
-        body: selectedProducts.map(name => {
-          const cat = categories[productList.indexOf(name)%categories.length];
-          return [name, cat];
-        }),
-        theme: "striped",
-        styles: { fontSize: 11 },
-        margin: { left: 55 },
-        tableWidth: pageWidth - 110,
-      });
-      y = (doc as any).lastAutoTable.finalY + 12;
-
-      // Dummy description for each selected
-      doc.setFontSize(11);
-      selectedProducts.forEach((prod, idx) => {
-        doc.setTextColor(pieColors[idx%pieColors.length]);
-        doc.text(`Product: ${prod} - Trend (see line chart above)`, 55, y);
-        y += 12;
-      });
+      await renderAndAdd(customPieRef.current, "Pie: Product Categories (Selected)", 340, 220, 10);
+      await renderAndAdd(customBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} (Selected Products)`, 340, 220, 10);
+      await renderAndAdd(customLineRef.current, "Line: Trend (Selected Products)", 700, 230, 16);
     }
 
     doc.save("Visualizations_Report.pdf");
   };
+
+  // Main products to show in charts (top5 + bottom5 combined, de-duped)
+  const mainProducts = combined;
+
+  // For custom viz, pie needs quantity/sales sum, so we create simplified data:
+  const customData = selectedProducts.map((name, idx) => {
+    return {
+      name,
+      category: categories[productList.indexOf(name) % categories.length],
+      sales: getRandomInt(5000, 20000),
+      quantity: getRandomInt(25, 300),
+    }
+  });
 
   return (
     <div className="min-h-screen py-10 bg-background flex flex-col items-center">
@@ -203,7 +184,7 @@ export default function Visualization() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => setCustomViz(s => !s)}
+          onClick={() => { setCustomViz(s => !s); setSelectedProducts([]); }}
           className="border-cosmic-gold text-cosmic-gold"
         >
           Custom Visualization
@@ -217,15 +198,15 @@ export default function Visualization() {
         </Button>
       </div>
 
-      {/* Top/bottom 5 grouping for current mode */}
+      {/* Default Visualizations (Top 5 & Bottom 5 combined) */}
       <div className="flex flex-wrap gap-8 justify-center items-start mb-7 w-full max-w-5xl">
         {/* Pie Chart */}
-        <div className="bg-white/10 rounded-lg p-4 shadow w-[340px]">
-          <div className="font-semibold mb-2 text-cosmic-blue text-center">Pie: Product Categories (Top 5)</div>
+        <div className="bg-white/10 rounded-lg p-4 shadow w-[340px]" ref={mainPieRef}>
+          <div className="font-semibold mb-2 text-cosmic-blue text-center">Pie: Product Categories (Top 5 & Bottom 5)</div>
           <ResponsiveContainer width={300} height={200}>
             <PieChart>
-              <Pie data={top5} dataKey={mode} nameKey="category" cx="50%" cy="50%" outerRadius={65} label>
-                {top5.map((entry, i) => (
+              <Pie data={mainProducts} dataKey={mode} nameKey="category" cx="50%" cy="50%" outerRadius={65} label>
+                {mainProducts.map((entry, i) => (
                   <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
                 ))}
               </Pie>
@@ -235,10 +216,10 @@ export default function Visualization() {
           </ResponsiveContainer>
         </div>
         {/* Histogram */}
-        <div className="bg-white/10 rounded-lg p-4 shadow w-[340px]">
-          <div className="font-semibold mb-2 text-cosmic-blue text-center">Histogram: {mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5)</div>
+        <div className="bg-white/10 rounded-lg p-4 shadow w-[340px]" ref={mainBarRef}>
+          <div className="font-semibold mb-2 text-cosmic-blue text-center">Histogram: {mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)</div>
           <ResponsiveContainer width={300} height={200}>
-            <BarChart data={top5}>
+            <BarChart data={mainProducts}>
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
@@ -247,14 +228,14 @@ export default function Visualization() {
           </ResponsiveContainer>
         </div>
         {/* Line Chart */}
-        <div className="bg-white/10 rounded-lg p-4 shadow w-[700px] col-span-2">
-          <div className="font-semibold mb-2 text-cosmic-blue text-center">Line: Annual Trend per Product (Top 5)</div>
+        <div className="bg-white/10 rounded-lg p-4 shadow w-[700px] col-span-2" ref={mainLineRef}>
+          <div className="font-semibold mb-2 text-cosmic-blue text-center">Line: Annual Trend per Product (Top 5 & Bottom 5)</div>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={trendDummy(top5.map(p => p.name))}>
+            <LineChart data={trendDummy(mainProducts.map(p => p.name))}>
               <XAxis dataKey="month"/>
               <YAxis />
               <Tooltip />
-              {top5.map((item, idx) => (
+              {mainProducts.map((item, idx) => (
                 <Line
                   type="monotone"
                   dataKey={item.name}
@@ -266,28 +247,6 @@ export default function Visualization() {
               <Legend />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-        {/* Bottom 5 Table */}
-        <div className="bg-white/10 rounded-lg p-4 shadow w-full">
-          <div className="font-semibold mb-3 text-cosmic-gold text-center">Bottom 5 Products (by {mode})</div>
-          <table className="w-full text-left border rounded overflow-hidden text-slate-100">
-            <thead className="bg-cosmic-blue text-black">
-              <tr>
-                <th className="p-2">Product</th>
-                <th className="p-2">Category</th>
-                <th className="p-2">{mode === "sales" ? "Sales" : "Quantity"}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bottom5.map((row, i) => (
-                <tr key={i} className="bg-black/70 border-b last:border-0">
-                  <td className="p-2">{row.name}</td>
-                  <td className="p-2">{row.category}</td>
-                  <td className="p-2">{row[mode]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
       {/* Custom Viz box */}
@@ -333,24 +292,54 @@ export default function Visualization() {
             {/* Custom Trends */}
             {selectedProducts.length > 0 && (
               <div className="my-5 bg-white/5 rounded-lg p-5">
-                <div className="font-semibold text-cosmic-blue mb-3 text-center">Custom Line Chart: Trends for Selected Products</div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={selectedTrend}>
-                    <XAxis dataKey="month"/>
-                    <YAxis />
-                    <Tooltip />
-                    {selectedProducts.map((prod, idx) => (
-                      <Line
-                        key={prod}
-                        type="monotone"
-                        dataKey={prod}
-                        stroke={pieColors[idx%pieColors.length]}
-                        dot={false}
-                      />
-                    ))}
-                    <Legend />
-                  </LineChart>
-                </ResponsiveContainer>
+                {/* Pie Chart Selected */}
+                <div className="mb-6" ref={customPieRef}>
+                  <div className="font-semibold mb-2 text-cosmic-blue text-center">Pie: Product Categories (Selected)</div>
+                  <ResponsiveContainer width={300} height={200}>
+                    <PieChart>
+                      <Pie data={customData} dataKey={mode} nameKey="category" cx="50%" cy="50%" outerRadius={65} label>
+                        {customData.map((entry, i) => (
+                          <Cell key={`cell-selectedpie-${i}`} fill={pieColors[i % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Histogram Selected */}
+                <div className="mb-6" ref={customBarRef}>
+                  <div className="font-semibold mb-2 text-cosmic-blue text-center">Histogram: {mode === "sales" ? "Sales" : "Quantity"} (Selected Products)</div>
+                  <ResponsiveContainer width={300} height={200}>
+                    <BarChart data={customData}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey={mode} fill="#4884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Custom Line Chart Selected */}
+                <div ref={customLineRef}>
+                  <div className="font-semibold mb-2 text-cosmic-blue text-center">Line: Trend (Selected Products)</div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart data={selectedTrend}>
+                      <XAxis dataKey="month"/>
+                      <YAxis />
+                      <Tooltip />
+                      {selectedProducts.map((prod, idx) => (
+                        <Line
+                          key={prod}
+                          type="monotone"
+                          dataKey={prod}
+                          stroke={pieColors[idx%pieColors.length]}
+                          dot={false}
+                        />
+                      ))}
+                      <Legend />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
           </div>
