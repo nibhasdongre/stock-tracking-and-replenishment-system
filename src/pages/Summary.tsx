@@ -12,6 +12,8 @@ import MainPieChart from "./visualization/MainPieChart";
 import MainBarChart from "./visualization/MainBarChart";
 import MainLineChart from "./visualization/MainLineChart";
 import { chartsDummy, trendDummy } from "./visualization/visualizationUtils";
+import SummaryTable from "./summary/SummaryTable";
+import SummarySelector from "./summary/SummarySelector";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -86,6 +88,10 @@ export default function Summary() {
     const date = new Date(2000, num - 1, 1);
     return date.toLocaleString('default', { month: 'long' });
   };
+
+  // Build common product/sales arrays with correct types
+  const productToSummary = (arr: { name: string; value: number }[]) =>
+    arr.map(p => ({ name: p.name, quantity: p.value, sales: 0 }));
 
   // Decide report table title and data
   let tableTitle = "";
@@ -251,122 +257,47 @@ export default function Summary() {
             bottomSales={bottomSales}
           />
         </div>
-        {/* Viz Chart REFS, hidden but with real charts */}
+        {/* Hidden Visual Chart Refs */}
         <div style={{ display: "none" }}>
           <div ref={pieRef}>
-            <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))} mode={"quantity"} />
+            <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({
+              name: item.name, quantity: item.value, sales: 0, category: "" }))} mode={"quantity"} />
           </div>
           <div ref={barRef}>
-            <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))} mode={"quantity"} />
+            <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({
+              name: item.name, quantity: item.value, sales: 0, category: "" }))} mode={"quantity"} />
           </div>
           <div ref={lineRef}>
             <MainLineChart
-              products={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))}
+              products={[...topQuantity, ...bottomQuantity].map(item => ({
+                name: item.name, quantity: item.value, sales: 0, category: "" }))}
               mode="quantity"
-              trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p=>p.name))}
+              trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
             />
           </div>
         </div>
-        {/* Moved: Date & Annual Selection: Improved Layout */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4 mb-7 w-full">
-          <div className="flex-1 flex flex-col sm:flex-row sm:items-end sm:gap-1">
-            <div className="flex gap-2 items-end w-full sm:w-auto">
-              <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
-              <Input
-                className="w-14 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-                type="text"
-                maxLength={2}
-                inputMode="numeric"
-                placeholder="MM"
-                value={month}
-                onChange={e => setMonth(e.target.value.replace(/\D/g, ""))}
-              />
-              <span className="text-cosmic-gold font-bold mx-1 mb-1">/</span>
-              <Input
-                className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-                type="text"
-                maxLength={4}
-                inputMode="numeric"
-                placeholder="YYYY"
-                value={year}
-                onChange={e => setYear(e.target.value.replace(/\D/g, ""))}
-              />
-              <Button
-                className="ml-0 sm:ml-3 mt-2 sm:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
-                size="sm"
-                onClick={() => setVisibleReportType("monthly")}
-              >
-                <CalendarIcon className="mr-1 w-4" />
-                Show report
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col sm:flex-row sm:items-end sm:gap-1 mt-2 sm:mt-0">
-            <div className="flex items-end gap-2 w-full sm:w-auto">
-              <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Annual report:</label>
-              <Input
-                className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-                type="text"
-                maxLength={4}
-                inputMode="numeric"
-                placeholder="YYYY"
-                value={annualYear}
-                onChange={e => setAnnualYear(e.target.value.replace(/\D/g, ""))}
-                min={minYear}
-                max={maxYear}
-              />
-              <Button
-                className="ml-0 sm:ml-3 mt-2 sm:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
-                size="sm"
-                onClick={() => setVisibleReportType("annual")}
-              >
-                <CalendarIcon className="mr-1 w-4" />
-                View annual
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 flex items-center justify-center mt-3 sm:mt-0 sm:justify-end">
-            <Button
-              variant="outline"
-              className="border-cosmic-gold text-cosmic-gold font-semibold px-5"
-              onClick={() => navigate("/visualization")}
-              size="sm"
-            >
-              <BarChartHorizontal className="w-4 mr-1" />
-              Visualize
-            </Button>
-          </div>
-        </div>
-        {/* Report table (shows after clicking report buttons) */}
+        {/* Selector */}
+        <SummarySelector
+          month={month}
+          setMonth={setMonth}
+          year={year}
+          setYear={setYear}
+          annualYear={annualYear}
+          setAnnualYear={setAnnualYear}
+          minYear={minYear}
+          maxYear={maxYear}
+          onMonthly={() => setVisibleReportType("monthly")}
+          onAnnual={() => setVisibleReportType("annual")}
+        />
+        {/* Report table */}
         {visibleReportType !== "none" && (
           <div className="mt-8">
-            {/* Visible summary table FOR IMAGE EXPORT */}
-            <div ref={summaryTableRef}>
-              <h3 className="text-center text-lg font-bold text-cosmic-gold mb-2">
-                {tableTitle}
-              </h3>
-              <table className="w-full border text-slate-100 rounded-lg overflow-hidden">
-                <thead>
-                  <tr className="bg-cosmic-blue text-black">
-                    <th className="p-2">Product</th>
-                    <th className="p-2">Quantity</th>
-                    <th className="p-2">Sales</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((row, i) => (
-                    <tr
-                      key={i}
-                      className="bg-black/70 border-b last:border-0"
-                    >
-                      <td className="p-2">{row.name}</td>
-                      <td className="p-2 text-center">{row.quantity}</td>
-                      <td className="p-2 text-center">{row.sales}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Summary Table */}
+            <SummaryTable
+              tableTitle={tableTitle}
+              tableData={tableData}
+              summaryTableRef={summaryTableRef}
+            />
             <Button
               className="mt-5 flex items-center bg-cosmic-gold text-black font-semibold hover:bg-cosmic-blue hover:text-cosmic-gold"
               onClick={handleDownloadPdf}
