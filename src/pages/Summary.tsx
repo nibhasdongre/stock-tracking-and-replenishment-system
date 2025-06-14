@@ -8,6 +8,10 @@ import { CalendarIcon, BarChartHorizontal, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from "html2canvas";
+import MainPieChart from "./visualization/MainPieChart";
+import MainBarChart from "./visualization/MainBarChart";
+import MainLineChart from "./visualization/MainLineChart";
+import { chartsDummy, trendDummy } from "./visualization/visualizationUtils";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -71,6 +75,10 @@ export default function Summary() {
   const pieRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
+  // Ref for summary matrix
+  const summaryMatrixRef = useRef<HTMLDivElement>(null);
+  // Ref for summary table
+  const summaryTableRef = useRef<HTMLDivElement>(null);
 
   // Helper to format month name
   const getMonthName = (numStr: string) => {
@@ -98,37 +106,50 @@ export default function Summary() {
     return new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   };
 
-  // Helper for image rendering
-  const renderAndAdd = async (doc: any, element: HTMLDivElement | null, title: string, maxW: number, maxH: number, y: number) => {
+  // Improved helper for image rendering 
+  const renderAndAdd = async (
+    doc: any,
+    element: HTMLDivElement | null,
+    title: string,
+    maxW: number,
+    maxH: number,
+    y: number,
+    opts: {center?: boolean} = {}
+  ) => {
     if (!element) return y;
-    const canvas = await html2canvas(element, { backgroundColor: "#18181b", scale: 2 });
+    // Use higher scale for better quality, set background white, and avoid cropping
+    const canvas = await html2canvas(element, {
+      backgroundColor: "#18181b",
+      scale: 2,
+      useCORS: true,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+    });
     const imgData = canvas.toDataURL("image/png");
     let imgWidth = canvas.width;
     let imgHeight = canvas.height;
 
-    // Scale image to fit maxW, maxH
-    if (imgWidth > maxW) {
-      const scale = maxW / imgWidth;
-      imgWidth = maxW;
-      imgHeight = imgHeight * scale;
-    }
-    if (imgHeight > maxH) {
-      const scale = maxH / imgHeight;
-      imgHeight = maxH;
-      imgWidth = imgWidth * scale;
-    }
+    // Scale to fit maxW, maxH, preserving aspect
+    let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
+    imgWidth = imgWidth * scale;
+    imgHeight = imgHeight * scale;
 
     doc.setFontSize(13);
     doc.setTextColor("#1566B8");
-    doc.text(title, 55, y);
+    if (opts.center) {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      doc.text(title, pageWidth / 2, y, {align: "center"});
+    } else {
+      doc.text(title, 55, y);
+    }
     y += 16;
 
-    doc.addImage(imgData, "PNG", 55, y, imgWidth, imgHeight, undefined, "FAST");
+    doc.addImage(imgData, "PNG", opts.center ? (doc.internal.pageSize.getWidth() - imgWidth)/2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
     y += imgHeight + 12;
     return y;
   };
 
-  // PDF export: include dynamic title, month/year, summary boxes, and table using autoTable
+  // PDF export: summary table, 5/5 "matrix", all 3 main visualizations in nice order.
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
 
@@ -155,92 +176,59 @@ export default function Summary() {
     doc.setFontSize(12);
     doc.text(subTitle, pageWidth / 2, y, { align: "center" });
 
-    // 4 summary boxes side by side: two columns: Quantity and Sales (each with top/bottom 5)
-    y += 25;
+    y += 18;
 
-    autoTable(doc, {
-      startY: y,
-      head: [
-        [
-          { content: "Top 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
-          { content: "Top 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } },
-        ]
-      ],
-      body: Array.from({ length: 5 }).map((_, i) => [
-        `${topQuantity[i]?.name ?? ""} ${topQuantity[i]?.value !== undefined ? " - " + topQuantity[i]?.value : ""}`,
-        `${topSales[i]?.name ?? ""} ${topSales[i]?.value !== undefined ? " - " + topSales[i]?.value : ""}`,
-      ]),
-      theme: "grid",
-      styles: {
-        fontSize: 10, cellPadding: { top: 2, bottom: 2, left: 4, right: 4 }, overflow: 'linebreak'
-      },
-      margin: { left: 40, right: 40 },
-      tableWidth: pageWidth - 80,
-      didDrawPage: data => {
-        // Only first box on first page: place bottom box header after it
-      }
-    });
+    // Add Top 5/Bottom 5 Matrix as image (clean, formatted)
+    if (summaryMatrixRef.current) {
+      y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
+    } else {
+      // fallback: autoTable matrix
+      y += 8;
+      autoTable(doc, {
+        startY: y,
+        head: [
+          [
+            { content: "Top 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
+            { content: "Top 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } }
+          ]
+        ],
+        body: Array.from({ length: 5 }).map((_, i) => [
+          `${topQuantity[i]?.name ?? ""} ${topQuantity[i]?.value !== undefined ? " - " + topQuantity[i]?.value : ""}`,
+          `${topSales[i]?.name ?? ""} ${topSales[i]?.value !== undefined ? " - " + topSales[i]?.value : ""}`,
+        ]),
+        theme: "grid",
+        margin: { left: 55, right: 55 },
+        fontSize: 10,
+      });
+      let nextY = (doc as any).lastAutoTable.finalY + 8;
+      autoTable(doc, {
+        startY: nextY,
+        head: [
+          [
+            { content: "Bottom 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
+            { content: "Bottom 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } }
+          ]
+        ],
+        body: Array.from({ length: 5 }).map((_, i) => [
+          `${bottomQuantity[i]?.name ?? ""} ${bottomQuantity[i]?.value !== undefined ? " - " + bottomQuantity[i]?.value : ""}`,
+          `${bottomSales[i]?.name ?? ""} ${bottomSales[i]?.value !== undefined ? " - " + bottomSales[i]?.value : ""}`,
+        ]),
+        theme: "grid",
+        margin: { left: 55, right: 55 },
+        fontSize: 10,
+      });
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
 
-    let nextY = (doc as any).lastAutoTable.finalY + 8;
+    // Add main summary table as image
+    if (summaryTableRef.current) {
+      y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
+    }
 
-    autoTable(doc, {
-      startY: nextY,
-      head: [
-        [
-          { content: "Bottom 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
-          { content: "Bottom 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } },
-        ]
-      ],
-      body: Array.from({ length: 5 }).map((_, i) => [
-        `${bottomQuantity[i]?.name ?? ""} ${bottomQuantity[i]?.value !== undefined ? " - " + bottomQuantity[i]?.value : ""}`,
-        `${bottomSales[i]?.name ?? ""} ${bottomSales[i]?.value !== undefined ? " - " + bottomSales[i]?.value : ""}`,
-      ]),
-      theme: "grid",
-      styles: {
-        fontSize: 10, cellPadding: { top: 2, bottom: 2, left: 4, right: 4 }, overflow: 'linebreak'
-      },
-      margin: { left: 40, right: 40 },
-      tableWidth: pageWidth - 80,
-    });
-
-    nextY = (doc as any).lastAutoTable.finalY + 16;
-
-    // Data Table
-    autoTable(doc, {
-      startY: nextY,
-      head: [
-        [
-          { content: "Product", styles: { halign: "center", fillColor: "#d9e7fa", textColor: "#1566B8" } },
-          { content: "Quantity", styles: { halign: "center", fillColor: "#d9e7fa", textColor: "#1566B8" } },
-          { content: "Sales", styles: { halign: "center", fillColor: "#d9e7fa", textColor: "#1566B8" } },
-        ]
-      ],
-      body: tableData.map(row => [
-        row.name,
-        row.quantity,
-        row.sales
-      ]),
-      theme: "striped",
-      styles: {
-        fontSize: 11,
-        halign: "center",
-        cellWidth: "wrap",
-      },
-      columnStyles: {
-        0: { halign: 'left', cellWidth: (pageWidth - 80) * 0.45 },
-        1: { cellWidth: (pageWidth - 80) * 0.15 },
-        2: { cellWidth: (pageWidth - 80) * 0.24 },
-      },
-      margin: { left: 40, right: 40 },
-      tableWidth: pageWidth - 80,
-    });
-
-    let vizY = (doc as any).lastAutoTable.finalY + 18;
-
-    // Add images of default visualizations
-    vizY = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 340, 220, vizY);
-    vizY = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 340, 220, vizY);
-    vizY = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 700, 230, vizY);
+    // Visualizations
+    y = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 340, 220, y);
+    y = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 340, 220, y);
+    y = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 700, 230, y);
 
     doc.save(
       visibleReportType === "monthly"
@@ -257,24 +245,28 @@ export default function Summary() {
           Sales & Quantity Summary
         </h2>
         {/* Matrix */}
-        <SummaryMatrix
-          topQuantity={topQuantity}
-          bottomQuantity={bottomQuantity}
-          topSales={topSales}
-          bottomSales={bottomSales}
-        />
-        {/* Viz Chart REFS, hidden */}
+        <div ref={summaryMatrixRef}>
+          <SummaryMatrix
+            topQuantity={topQuantity}
+            bottomQuantity={bottomQuantity}
+            topSales={topSales}
+            bottomSales={bottomSales}
+          />
+        </div>
+        {/* Viz Chart REFS, hidden but with real charts */}
         <div style={{ display: "none" }}>
           <div ref={pieRef}>
-            {/* Pie Chart for default summary, product names NOT shown */}
-            {/* Must match the default pie chart in Visualization (for PDF consistency) */}
-            {/* You must create it the same way as in Visualization.tsx, excluding product names in labels */}
+            <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))} mode={"quantity"} />
           </div>
           <div ref={barRef}>
-            {/* Bar Chart for default summary */}
+            <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))} mode={"quantity"} />
           </div>
           <div ref={lineRef}>
-            {/* Line Chart for default summary */}
+            <MainLineChart
+              products={[...topQuantity, ...bottomQuantity].map(item=>({name:item.name, quantity:item.value, sales:0, category:""}))}
+              mode="quantity"
+              trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p=>p.name))}
+            />
           </div>
         </div>
         {/* Moved: Date & Annual Selection to top */}
@@ -344,8 +336,8 @@ export default function Summary() {
         {/* Report table (shows after clicking report buttons) */}
         {visibleReportType !== "none" && (
           <div className="mt-8">
-            {/* Visible summary table */}
-            <div>
+            {/* Visible summary table FOR IMAGE EXPORT */}
+            <div ref={summaryTableRef}>
               <h3 className="text-center text-lg font-bold text-cosmic-gold mb-2">
                 {tableTitle}
               </h3>
