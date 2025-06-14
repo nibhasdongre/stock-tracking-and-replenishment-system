@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import StarBackground from "@/components/StarBackground";
 import SummaryMatrix from "@/components/SummaryMatrix";
@@ -66,58 +67,54 @@ export default function Summary() {
   const minYear = 2010;
   const maxYear = now.getFullYear();
 
-  const reportTableRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
-  // Modified PDF export using jsPDF + autoTable for full table capture
+  // Helper to format month name
+  const getMonthName = (numStr: string) => {
+    const num = Number(numStr);
+    const date = new Date(2000, num - 1, 1);
+    return date.toLocaleString('default', { month: 'long' });
+  };
+
+  // PDF export: include dynamic title, month/year, summary boxes, and table
   const handleDownloadPdf = () => {
-    let tableTitle = "";
-    let tableData: { name: string; quantity: number; sales: number }[] = [];
-    if (visibleReportType === "monthly") {
-      tableTitle = `Monthly Report for ${month}-${year}`;
-      tableData = dummyMonthlyReport;
-    } else if (visibleReportType === "annual") {
-      tableTitle = `Annual Report for ${annualYear}`;
-      tableData = dummyAnnualReport;
-    } else {
-      return;
-    }
-
-    const doc = new jsPDF();
-
-    // Add table title
-    doc.setFontSize(16);
-    doc.text(tableTitle, 14, 18);
-
-    // Build row data for autoTable
-    const headers = [["Product", "Quantity", "Sales"]];
-    const rows = tableData.map(row => [row.name, row.quantity, row.sales]);
-
-    autoTable(doc, {
-      startY: 26,
-      head: headers,
-      body: rows,
-      headStyles: {
-        fillColor: [33, 150, 243], // cosmic-blue
-        textColor: [0, 0, 0],
-        halign: "center",
-        fontStyle: "bold",
+    if (!printRef.current) return;
+    const doc = new jsPDF("p", "pt", "a4");
+    // We want a margin at the top for the PDF
+    doc.html(printRef.current, {
+      callback: function (doc) {
+        doc.save(
+          visibleReportType === "monthly"
+            ? `Sales_Quantity_Summary_${month}-${year}.pdf`
+            : `Sales_Quantity_Summary_${annualYear}.pdf`
+        );
       },
-      bodyStyles: {
-        halign: "center",
-      },
-      styles: {
-        minCellHeight: 10,
-        fontSize: 11,
-      },
-      theme: "striped",
-      margin: { left: 14, right: 14 },
+      x: 24,
+      y: 24,
+      width: 547, // ensure fits A4 with some margin
+      windowWidth: 800,
+      html2canvas: {
+        scale: 0.78, // fit more content per page
+        useCORS: true,
+        backgroundColor: "#fff"
+      }
     });
+  };
 
-    doc.save(
-      visibleReportType === "monthly"
-        ? `monthly-report-${month}-${year}.pdf`
-        : `annual-report-${annualYear}.pdf`
-    );
+  // Decide report table title and data
+  let tableTitle = "";
+  let tableData: { name: string; quantity: number; sales: number }[] = [];
+  if (visibleReportType === "monthly") {
+    tableTitle = `Monthly Report for ${getMonthName(month)} ${year}`;
+    tableData = dummyMonthlyReport;
+  } else if (visibleReportType === "annual") {
+    tableTitle = `Annual Report for ${annualYear}`;
+    tableData = dummyAnnualReport;
+  }
+
+  // Today's date in "MMMM dd, yyyy" format
+  const getTodayDisplay = () => {
+    return new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   };
 
   return (
@@ -136,7 +133,6 @@ export default function Summary() {
         />
         {/* Date & actions */}
         <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-2">
-          {/* Month Picker */}
           <div className="flex gap-2 items-end">
             <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
             <Input
@@ -206,11 +202,111 @@ export default function Summary() {
         {/* Report table (shows after clicking report buttons) */}
         {visibleReportType !== "none" && (
           <div className="mt-8">
-            <div ref={reportTableRef}>
+            {/* Print area for PDF: includes title, matrix, and table */}
+            <div className="hidden print-area-for-pdf">
+              <div
+                ref={printRef}
+                style={{
+                  padding: 16,
+                  fontFamily: 'sans-serif',
+                  background: "#fff",
+                  color: "#222",
+                  minWidth: 500,
+                  maxWidth: 700,
+                  margin: "auto"
+                }}
+              >
+                <div style={{ textAlign: "center", marginBottom: 12 }}>
+                  <span style={{ display: "block", fontWeight: "bold", fontSize: 22, color: "#1566B8" }}>
+                    Sales & Quantity Summary
+                  </span>
+                  <span style={{ fontSize: 14, color: "#5b5b5b" }}>
+                    {getTodayDisplay()}
+                  </span>
+                  <span style={{ display: "block", fontSize: 14, marginTop: 4 }}>
+                    {visibleReportType === "monthly"
+                      ? `Month/Year: ${getMonthName(month)} ${year}`
+                      : `Year: ${annualYear}`}
+                  </span>
+                </div>
+                {/* Matrix Summary */}
+                <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+                  {/* Quantity summary */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: "bold", color: "#1566B8", marginBottom: 4, textAlign: "center" }}>Top 5 Products (Quantity)</div>
+                    <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+                      {topQuantity.map((item, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span>{item.name}</span>
+                          <span style={{ fontWeight: "bold", marginLeft: 6 }}>{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <div style={{ fontWeight: "bold", color: "#1566B8", margin: "10px 0 4px", textAlign: "center" }}>Bottom 5 Products (Quantity)</div>
+                    <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+                      {bottomQuantity.map((item, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span>{item.name}</span>
+                          <span style={{ fontWeight: "bold", marginLeft: 6 }}>{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  {/* Sales summary */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: "bold", color: "#C7B042", marginBottom: 4, textAlign: "center" }}>Top 5 Products (Sales)</div>
+                    <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+                      {topSales.map((item, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span>{item.name}</span>
+                          <span style={{ fontWeight: "bold", marginLeft: 6 }}>{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <div style={{ fontWeight: "bold", color: "#C7B042", margin: "10px 0 4px", textAlign: "center" }}>Bottom 5 Products (Sales)</div>
+                    <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+                      {bottomSales.map((item, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span>{item.name}</span>
+                          <span style={{ fontWeight: "bold", marginLeft: 6 }}>{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+                {/* Report Table */}
+                <div>
+                  <div style={{ textAlign: "center", fontWeight: "bold", fontSize: 17, marginBottom: 6, color: "#C7B042" }}>{tableTitle}</div>
+                  <table style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                    marginTop: 4
+                  }}>
+                    <thead>
+                      <tr>
+                        <th style={{ border: "1px solid #222", padding: "5px 8px", background: "#d9e7fa" }}>Product</th>
+                        <th style={{ border: "1px solid #222", padding: "5px 8px", background: "#d9e7fa" }}>Quantity</th>
+                        <th style={{ border: "1px solid #222", padding: "5px 8px", background: "#d9e7fa" }}>Sales</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.map((row, i) => (
+                        <tr key={i}>
+                          <td style={{ border: "1px solid #222", padding: "4px 7px" }}>{row.name}</td>
+                          <td style={{ border: "1px solid #222", padding: "4px 7px", textAlign: "center" }}>{row.quantity}</td>
+                          <td style={{ border: "1px solid #222", padding: "4px 7px", textAlign: "center" }}>{row.sales}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {/* Visible summary table */}
+            <div>
               <h3 className="text-center text-lg font-bold text-cosmic-gold mb-2">
-                {visibleReportType === "monthly"
-                  ? `Monthly Report for ${month}-${year}`
-                  : `Annual Report for ${annualYear}`}
+                {tableTitle}
               </h3>
               <table className="w-full border text-slate-100 rounded-lg overflow-hidden">
                 <thead>
@@ -221,10 +317,7 @@ export default function Summary() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(visibleReportType === "monthly"
-                    ? dummyMonthlyReport
-                    : dummyAnnualReport
-                  ).map((row, i) => (
+                  {tableData.map((row, i) => (
                     <tr
                       key={i}
                       className="bg-black/70 border-b last:border-0"
