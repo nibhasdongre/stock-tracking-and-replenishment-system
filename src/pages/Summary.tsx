@@ -56,7 +56,7 @@ const dummyAnnualReport = [
   { name: "Product Beta", quantity: 401, sales: 12050 },
   { name: "Product Alpha", quantity: 389, sales: 11700 },
   { name: "Product Gamma", quantity: 318, sales: 10680 },
-  { name: "Product Delta", quantity: 283, sales: 10290 },
+  { name: "Product Delta", value: 283, sales: 10290 },
   { name: "Product Zeta", quantity: 269, sales: 9850 },
 ];
 
@@ -198,7 +198,6 @@ export default function Summary() {
         ]),
         theme: "grid",
         margin: { left: 55, right: 55 },
-        fontSize: 10,
       });
       let nextY = (doc as any).lastAutoTable.finalY + 8;
       autoTable(doc, {
@@ -215,7 +214,6 @@ export default function Summary() {
         ]),
         theme: "grid",
         margin: { left: 55, right: 55 },
-        fontSize: 10,
       });
       y = (doc as any).lastAutoTable.finalY + 12;
     }
@@ -269,69 +267,75 @@ export default function Summary() {
             />
           </div>
         </div>
-        {/* Moved: Date & Annual Selection to top */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-7">
-          <div className="flex gap-2 items-end">
-            <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
-            <Input
-              className="w-14 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-              type="text"
-              maxLength={2}
-              inputMode="numeric"
-              placeholder="MM"
-              value={month}
-              onChange={e => setMonth(e.target.value.replace(/\D/g, ""))}
-            />
-            <span className="text-cosmic-gold font-bold mx-1 mb-1">/</span>
-            <Input
-              className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-              type="text"
-              maxLength={4}
-              inputMode="numeric"
-              placeholder="YYYY"
-              value={year}
-              onChange={e => setYear(e.target.value.replace(/\D/g, ""))}
-            />
+        {/* Moved: Date & Annual Selection: Improved Layout */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center sm:gap-4 mb-7 w-full">
+          <div className="flex-1 flex flex-col sm:flex-row sm:items-end sm:gap-1">
+            <div className="flex gap-2 items-end w-full sm:w-auto">
+              <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
+              <Input
+                className="w-14 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
+                type="text"
+                maxLength={2}
+                inputMode="numeric"
+                placeholder="MM"
+                value={month}
+                onChange={e => setMonth(e.target.value.replace(/\D/g, ""))}
+              />
+              <span className="text-cosmic-gold font-bold mx-1 mb-1">/</span>
+              <Input
+                className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
+                type="text"
+                maxLength={4}
+                inputMode="numeric"
+                placeholder="YYYY"
+                value={year}
+                onChange={e => setYear(e.target.value.replace(/\D/g, ""))}
+              />
+              <Button
+                className="ml-0 sm:ml-3 mt-2 sm:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
+                size="sm"
+                onClick={() => setVisibleReportType("monthly")}
+              >
+                <CalendarIcon className="mr-1 w-4" />
+                Show report
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col sm:flex-row sm:items-end sm:gap-1 mt-2 sm:mt-0">
+            <div className="flex items-end gap-2 w-full sm:w-auto">
+              <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Annual report:</label>
+              <Input
+                className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
+                type="text"
+                maxLength={4}
+                inputMode="numeric"
+                placeholder="YYYY"
+                value={annualYear}
+                onChange={e => setAnnualYear(e.target.value.replace(/\D/g, ""))}
+                min={minYear}
+                max={maxYear}
+              />
+              <Button
+                className="ml-0 sm:ml-3 mt-2 sm:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
+                size="sm"
+                onClick={() => setVisibleReportType("annual")}
+              >
+                <CalendarIcon className="mr-1 w-4" />
+                View annual
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center mt-3 sm:mt-0 sm:justify-end">
             <Button
-              className="ml-3 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
+              variant="outline"
+              className="border-cosmic-gold text-cosmic-gold font-semibold px-5"
+              onClick={() => navigate("/visualization")}
               size="sm"
-              onClick={() => setVisibleReportType("monthly")}
             >
-              <CalendarIcon className="mr-1 w-4" />
-              Show report for that month
+              <BarChartHorizontal className="w-4 mr-1" />
+              Visualize
             </Button>
           </div>
-          <div className="flex items-end gap-2">
-            <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Annual report:</label>
-            <Input
-              className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
-              type="text"
-              maxLength={4}
-              inputMode="numeric"
-              placeholder="YYYY"
-              value={annualYear}
-              onChange={e => setAnnualYear(e.target.value.replace(/\D/g, ""))}
-              min={minYear}
-              max={maxYear}
-            />
-            <Button
-              className="ml-3 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
-              size="sm"
-              onClick={() => setVisibleReportType("annual")}
-            >
-              <CalendarIcon className="mr-1 w-4" />
-              View annual report
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            className="border-cosmic-gold text-cosmic-gold font-semibold px-5 ml-4"
-            onClick={() => navigate("/visualization")}
-            size="sm"
-          >
-            <BarChartHorizontal className="w-4 mr-1" />
-            Visualize
-          </Button>
         </div>
         {/* Report table (shows after clicking report buttons) */}
         {visibleReportType !== "none" && (
