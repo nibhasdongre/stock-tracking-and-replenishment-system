@@ -54,12 +54,12 @@ export default function SummaryActions({
           onAnnual={onAnnual}
         />
       </div>
-      {/* Only one row for actions! */}
+      {/* Actions */}
       <div className="flex flex-row gap-2 mt-1 sm:mt-0 justify-end">
         <Button
           variant="outline"
           className="border-cosmic-gold text-cosmic-gold font-semibold px-5 whitespace-nowrap"
-          onClick={() => navigate("/visualization")}
+          onClick={() => navigate("/visualization?month=" + month + "&year=" + year)}
           size="sm"
         >
           <BarChartHorizontal className="w-4 mr-1" />

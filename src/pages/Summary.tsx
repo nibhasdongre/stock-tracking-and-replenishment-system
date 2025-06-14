@@ -71,16 +71,16 @@ export default function Summary() {
   const maxYear = now.getFullYear();
 
   // For PDF button loading spinner if needed
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = React.useState(false);
 
   // Refs for export elements
-  const pieRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLDivElement>(null);
-  const lineRef = useRef<HTMLDivElement>(null);
+  const pieRef = React.useRef<HTMLDivElement>(null);
+  const barRef = React.useRef<HTMLDivElement>(null);
+  const lineRef = React.useRef<HTMLDivElement>(null);
   // Ref for summary matrix
-  const summaryMatrixRef = useRef<HTMLDivElement>(null);
+  const summaryMatrixRef = React.useRef<HTMLDivElement>(null);
   // Ref for summary table
-  const summaryTableRef = useRef<HTMLDivElement>(null);
+  const summaryTableRef = React.useRef<HTMLDivElement>(null);
 
   // Helper to format month name
   const getMonthName = (numStr: string) => {
@@ -123,7 +123,7 @@ export default function Summary() {
     return new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   };
 
-  // Improved helper for image rendering 
+  // Renders a section (either table, matrix or chart) to the pdf
   const renderAndAdd = async (
     doc: any,
     element: HTMLDivElement | null,
@@ -134,9 +134,8 @@ export default function Summary() {
     opts: {center?: boolean} = {}
   ) => {
     if (!element) return y;
-    // Use higher scale for better quality, set background white, and avoid cropping
     const canvas = await html2canvas(element, {
-      backgroundColor: "#18181b",
+      backgroundColor: "#fff", // better contrast for export (was #18181b)
       scale: 2,
       useCORS: true,
       windowWidth: element.scrollWidth,
@@ -146,27 +145,26 @@ export default function Summary() {
     let imgWidth = canvas.width;
     let imgHeight = canvas.height;
 
-    // Scale to fit maxW, maxH, preserving aspect
+    // scale to fit maxW, maxH, preserving aspect
     let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
     imgWidth = imgWidth * scale;
     imgHeight = imgHeight * scale;
 
     doc.setFontSize(13);
     doc.setTextColor("#1566B8");
+    const pageWidth = doc.internal.pageSize.getWidth();
     if (opts.center) {
-      const pageWidth = doc.internal.pageSize.getWidth();
       doc.text(title, pageWidth / 2, y, {align: "center"});
     } else {
       doc.text(title, 55, y);
     }
     y += 16;
-
-    doc.addImage(imgData, "PNG", opts.center ? (doc.internal.pageSize.getWidth() - imgWidth)/2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
+    doc.addImage(imgData, "PNG", opts.center ? (pageWidth - imgWidth) / 2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
     y += imgHeight + 12;
     return y;
   };
 
-  // NEW: PDF export from top section
+  // NEW: PDF export from top section, includes all requested sections
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
     setExporting(true);
@@ -179,72 +177,56 @@ export default function Summary() {
       const pageWidth = doc.internal.pageSize.getWidth();
       let y = 40;
 
+      // Title and selected period
       doc.setFontSize(18);
       doc.setTextColor("#1566B8");
       doc.text(tableTitle, pageWidth / 2, y, { align: "center" });
 
-      y += 20;
+      y += 26;
       doc.setFontSize(11);
       doc.setTextColor("#222");
       doc.text(getTodayDisplay(), pageWidth / 2, y, { align: "center" });
 
       y += 18;
-      doc.setFontSize(12);
+      doc.setFontSize(13);
       doc.text(subTitle, pageWidth / 2, y, { align: "center" });
 
-      y += 18;
+      y += 24;
 
+      // Export Matrix (Top 5/Bottom 5)
       if (summaryMatrixRef.current) {
         y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
-      } else {
-        // fallback: autoTable for matrix if not present
-        y += 8;
-        autoTable(doc, {
-          startY: y,
-          head: [
-            [
-              { content: "Top 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
-              { content: "Top 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } }
-            ]
-          ],
-          body: Array.from({ length: 5 }).map((_, i) => [
-            `${topQuantity[i]?.name ?? ""} ${topQuantity[i]?.value !== undefined ? " - " + topQuantity[i]?.value : ""}`,
-            `${topSales[i]?.name ?? ""} ${topSales[i]?.value !== undefined ? " - " + topSales[i]?.value : ""}`,
-          ]),
-          theme: "grid",
-          margin: { left: 55, right: 55 },
-        });
-        let nextY = (doc as any).lastAutoTable.finalY + 8;
-        autoTable(doc, {
-          startY: nextY,
-          head: [
-            [
-              { content: "Bottom 5 Products (Quantity)", styles: { halign: 'center', fillColor: "#d9e7fa", textColor: "#1566B8" } },
-              { content: "Bottom 5 Products (Sales)", styles: { halign: 'center', fillColor: "#fff9cf", textColor: "#C7B042" } }
-            ]
-          ],
-          body: Array.from({ length: 5 }).map((_, i) => [
-            `${bottomQuantity[i]?.name ?? ""} ${bottomQuantity[i]?.value !== undefined ? " - " + bottomQuantity[i]?.value : ""}`,
-            `${bottomSales[i]?.name ?? ""} ${bottomSales[i]?.value !== undefined ? " - " + bottomSales[i]?.value : ""}`,
-          ]),
-          theme: "grid",
-          margin: { left: 55, right: 55 },
-        });
-        y = (doc as any).lastAutoTable.finalY + 12;
       }
 
+      // Summary Table (well formatted)
       if (summaryTableRef.current) {
         y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
       }
 
-      y = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 340, 220, y);
-      y = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 340, 220, y);
-      y = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 700, 230, y);
+      // The main visualizations, one per page for best clarity
+      // Pie
+      if (pieRef.current) {
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 400, 230, vizY, {center: true});
+      }
+      // Bar
+      if (barRef.current) {
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 400, 230, vizY, {center: true});
+      }
+      // Line
+      if (lineRef.current) {
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 670, 280, vizY, {center: true});
+      }
 
       doc.save(
         visibleReportType === "monthly"
-          ? `Sales_Quantity_Summary_${month}-${year}.pdf`
-          : `Sales_Quantity_Summary_${annualYear}.pdf`
+          ? `Summary_${month}-${year}.pdf`
+          : `Summary_${annualYear}.pdf`
       );
     } finally {
       setExporting(false);
@@ -258,7 +240,7 @@ export default function Summary() {
         <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
           Sales & Quantity Summary
         </h2>
-        {/* Actions bar: only one Visualize and one Download button */}
+        {/* Actions bar */}
         <SummaryActions
           month={month}
           setMonth={setMonth}
