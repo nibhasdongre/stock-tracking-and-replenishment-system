@@ -220,8 +220,8 @@ export default function Summary() {
           topSales={topSales}
           bottomSales={bottomSales}
         />
-        {/* Date & actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-2">
+        {/* Moved: Date & Annual Selection to top */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-7">
           <div className="flex gap-2 items-end">
             <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
             <Input
@@ -252,9 +252,6 @@ export default function Summary() {
               Show report for that month
             </Button>
           </div>
-        </div>
-        {/* Annual report action */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mt-2">
           <div className="flex items-end gap-2">
             <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Annual report:</label>
             <Input
@@ -287,7 +284,6 @@ export default function Summary() {
             Visualize
           </Button>
         </div>
-
         {/* Report table (shows after clicking report buttons) */}
         {visibleReportType !== "none" && (
           <div className="mt-8">
