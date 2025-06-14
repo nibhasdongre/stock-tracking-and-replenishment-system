@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import StarBackground from "@/components/StarBackground";
 
 type StockItem = {
   id: number;
@@ -58,81 +58,84 @@ export default function CurrentMonthTable() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center pt-6 px-2">
-      <div className="flex gap-3 mb-6">
-        <Button
-          variant="outline"
-          onClick={() => setUpdating(false)}
-          disabled={updating}
-        >
-          Update Stock
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={saveUpdate}
-          disabled={!saveEnabled}
-        >
-          Save
-        </Button>
-        <Button variant="default" onClick={() => navigate("/edit")}>
-          Edit Items
-        </Button>
-      </div>
-      <table className="w-full max-w-xl bg-card rounded shadow text-left border">
-        <thead>
-          <tr>
-            <th className="px-4 py-2">Stock Item</th>
-            <th className="px-4 py-2">Qty</th>
-            <th className="px-4 py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, idx) => (
-            <tr
-              key={row.id}
-              className={stockRow === idx && updating ? "bg-yellow-100" : ""}
-            >
-              <td className="px-4 py-2">{row.item}</td>
-              <td className="px-4 py-2">{row.qty}</td>
-              <td className="px-4 py-2">
-                {updating && stockRow === idx ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      value={input1}
-                      onChange={e => setInput1(e.target.value)}
-                      placeholder="Num 1"
-                      className="w-16 px-2 py-1 rounded border"
-                    />
-                    <input
-                      type="number"
-                      value={input2}
-                      onChange={e => setInput2(e.target.value)}
-                      placeholder="Num 2"
-                      className="w-16 px-2 py-1 rounded border"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={cancelUpdate}
-                      className="ml-2"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    onClick={() => startUpdate(idx)}
-                    disabled={updating}
-                  >
-                    Update
-                  </Button>
-                )}
-              </td>
+    <div className="relative min-h-screen bg-background flex flex-col items-center pt-6 px-2 overflow-hidden">
+      <StarBackground />
+      <div className="relative z-10 w-full flex flex-col items-center">
+        <div className="flex gap-3 mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setUpdating(false)}
+            disabled={updating}
+          >
+            Update Stock
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={saveUpdate}
+            disabled={!saveEnabled}
+          >
+            Save
+          </Button>
+          <Button variant="default" onClick={() => navigate("/edit")}>
+            Edit Items
+          </Button>
+        </div>
+        <table className="w-full max-w-xl bg-black/70 rounded shadow text-left border border-cosmic-blue animate-fade-in">
+          <thead>
+            <tr>
+              <th className="px-4 py-2">Stock Item</th>
+              <th className="px-4 py-2">Qty</th>
+              <th className="px-4 py-2"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => (
+              <tr
+                key={row.id}
+                className={stockRow === idx && updating ? "bg-yellow-100" : ""}
+              >
+                <td className="px-4 py-2">{row.item}</td>
+                <td className="px-4 py-2">{row.qty}</td>
+                <td className="px-4 py-2">
+                  {updating && stockRow === idx ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={input1}
+                        onChange={e => setInput1(e.target.value)}
+                        placeholder="Num 1"
+                        className="w-16 px-2 py-1 rounded border"
+                      />
+                      <input
+                        type="number"
+                        value={input2}
+                        onChange={e => setInput2(e.target.value)}
+                        placeholder="Num 2"
+                        className="w-16 px-2 py-1 rounded border"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={cancelUpdate}
+                        className="ml-2"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      onClick={() => startUpdate(idx)}
+                      disabled={updating}
+                    >
+                      Update
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

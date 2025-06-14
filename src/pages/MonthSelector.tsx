@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -37,9 +36,9 @@ export default function MonthSelector() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center px-3 overflow-hidden bg-gradient-to-br from-night-1 via-night-2 to-space-5">
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-3 overflow-hidden bg-background">
       <StarBackground />
-      <div className="relative z-10 flex flex-col items-center bg-black/70 bg-blur-lg rounded-xl shadow-2xl px-6 py-10 backdrop-blur-md max-w-md w-full border border-white/10">
+      <div className="relative z-10 flex flex-col items-center bg-black/70 bg-blur-lg rounded-xl shadow-2xl px-6 py-10 backdrop-blur-md max-w-md w-full border border-cosmic-blue animate-fade-in">
         <span className="mb-2 flex items-center gap-2 text-center mx-auto text-cosmic-gold">
           <Rocket size={26} className="mr-1" />
           <h2 className="text-2xl sm:text-3xl font-bold tracking-wider uppercase font-sans inline-block" style={{letterSpacing:"0.12em"}}>
