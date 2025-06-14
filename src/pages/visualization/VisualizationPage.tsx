@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -11,11 +12,14 @@ import CustomPieChart from "./CustomPieChart";
 import CustomBarChart from "./CustomBarChart";
 import CustomLineChart from "./CustomLineChart";
 import { categories, productList, chartsDummy, pieColors, trendDummy, getRandomInt } from "./visualizationUtils";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function VisualizationPage() {
   const [mode, setMode] = useState<"sales" | "quantity">("sales");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [customViz, setCustomViz] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
   const { top5, bottom5, combined } = chartsDummy(mode);
 
@@ -116,91 +120,102 @@ export default function VisualizationPage() {
 
   // PDF Export
   const handleDownloadPdf = async () => {
-    // Only enable for custom viz and selected products, enforced in visible download button
-    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 30;
+    setExporting(true);
+    try {
+      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let y = 30;
 
-    // 1. Title
-    doc.setFontSize(20);
-    doc.setTextColor("#1566B8");
-    doc.text("Visualizations Report", pageWidth / 2, y, { align: "center" });
-
-    y += 30;
-    // 2. Subtitle: date & mode
-    doc.setFontSize(12);
-    doc.setTextColor("#111");
-    doc.text(
-      `Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)} | Generated: ${currentDateString}`,
-      pageWidth / 2,
-      y,
-      { align: "center" }
-    );
-    y += 22;
-
-    // Helper for image capture (no cropping)
-    const renderAndAdd = async (element: HTMLDivElement | null, title: string, maxW: number, maxH: number, gap: number = 10, opts: {center?:boolean} = {}) => {
-      if (!element) return;
-      const canvas = await html2canvas(element, {
-        backgroundColor: "#18181b",
-        scale: 2,
-        useCORS: true,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-      });
-      const imgData = canvas.toDataURL("image/png");
-      let imgWidth = canvas.width;
-      let imgHeight = canvas.height;
-
-      let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
-      imgWidth = imgWidth * scale;
-      imgHeight = imgHeight * scale;
-
-      doc.setFontSize(13);
+      // 1. Title
+      doc.setFontSize(20);
       doc.setTextColor("#1566B8");
-      if (opts.center) {
-        doc.text(title, pageWidth / 2, y, { align: "center" });
-      } else {
-        doc.text(title, 55, y);
+      doc.text("Visualizations Report", pageWidth / 2, y, { align: "center" });
+
+      y += 30;
+      // 2. Subtitle: date & mode
+      doc.setFontSize(12);
+      doc.setTextColor("#111");
+      doc.text(
+        `Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)} | Generated: ${currentDateString}`,
+        pageWidth / 2,
+        y,
+        { align: "center" }
+      );
+      y += 22;
+
+      // Helper for image capture (no cropping)
+      const renderAndAdd = async (element: HTMLDivElement | null, title: string, maxW: number, maxH: number, gap: number = 10, opts: {center?:boolean} = {}) => {
+        if (!element) return;
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#18181b",
+          scale: 2,
+          useCORS: true,
+          windowWidth: element.scrollWidth,
+          windowHeight: element.scrollHeight,
+        });
+        const imgData = canvas.toDataURL("image/png");
+        let imgWidth = canvas.width;
+        let imgHeight = canvas.height;
+
+        let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
+        imgWidth = imgWidth * scale;
+        imgHeight = imgHeight * scale;
+
+        doc.setFontSize(13);
+        doc.setTextColor("#1566B8");
+        if (opts.center) {
+          doc.text(title, pageWidth / 2, y, { align: "center" });
+        } else {
+          doc.text(title, 55, y);
+        }
+        y += 16;
+        doc.addImage(imgData, "PNG", opts.center ? (pageWidth - imgWidth) / 2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
+        y += imgHeight + gap;
+      };
+
+      // 3. Matrix (SummaryMatrix as image)
+      if (summaryMatrixRef.current) {
+        y = await renderAndAddMatrix(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
       }
-      y += 16;
-      doc.addImage(imgData, "PNG", opts.center ? (pageWidth - imgWidth) / 2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
-      y += imgHeight + gap;
-    };
 
-    // 3. Matrix (SummaryMatrix as image)
-    if (summaryMatrixRef.current) {
-      y = await renderAndAddMatrix(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
-    }
-
-    // 4. Main summary table
-    if (summaryTableRef.current) {
-      await renderAndAdd(summaryTableRef.current, "Summary Table", pageWidth-80, 170, 12, {center:true});
-    }
-
-    // 5. Default Visualizations (Pie, Bar, Line)
-    await renderAndAdd(mainPieRef.current, `Pie Chart: Product Category Distribution (Top 5 & Bottom 5)`, 340, 220, 12);
-    await renderAndAdd(mainBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)`, 340, 220, 12);
-    await renderAndAdd(mainLineRef.current, `Line Chart: Annual Trend per Product (Top 5 & Bottom 5)`, 700, 260, 22);
-
-    // 6. If custom viz, show at end
-    if (customViz && selectedProducts.length > 0) {
-      doc.setFontSize(14);
-      doc.setTextColor("#1aaf81");
-      doc.text("Custom Visualization", 55, y);
-      y += 16;
-
-      // Custom selected product table
-      if (customProductsTableRef.current) {
-        await renderAndAdd(customProductsTableRef.current, "Selected Products Table", 350, 160, 15);
+      // 4. Main summary table
+      if (summaryTableRef.current) {
+        await renderAndAdd(summaryTableRef.current, "Summary Table", pageWidth-80, 170, 12, {center:true});
       }
-      // Custom charts
-      await renderAndAdd(customPieRef.current, "Pie: Product Categories (Selected)", 340, 220, 10);
-      await renderAndAdd(customBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} (Selected Products)`, 340, 220, 10);
-      await renderAndAdd(customLineRef.current, "Line: Trend (Selected Products)", 700, 230, 16);
-    }
 
-    doc.save("Visualizations_Report.pdf");
+      // 5. Default Visualizations (Pie, Bar, Line)
+      await renderAndAdd(mainPieRef.current, `Pie Chart: Product Category Distribution (Top 5 & Bottom 5)`, 340, 220, 12);
+      await renderAndAdd(mainBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)`, 340, 220, 12);
+      await renderAndAdd(mainLineRef.current, `Line Chart: Annual Trend per Product (Top 5 & Bottom 5)`, 700, 260, 22);
+
+      // 6. If custom viz, show at end
+      if (customViz && selectedProducts.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor("#1aaf81");
+        doc.text("Custom Visualization", 55, y);
+        y += 16;
+
+        // Custom selected product table
+        if (customProductsTableRef.current) {
+          await renderAndAdd(customProductsTableRef.current, "Selected Products Table", 350, 160, 15);
+        }
+        // Custom charts
+        await renderAndAdd(customPieRef.current, "Pie: Product Categories (Selected)", 340, 220, 10);
+        await renderAndAdd(customBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} (Selected Products)`, 340, 220, 10);
+        await renderAndAdd(customLineRef.current, "Line: Trend (Selected Products)", 700, 230, 16);
+      }
+
+      doc.save("Visualizations_Report.pdf");
+    } catch (err: any) {
+      console.error("PDF export failed:", err);
+      toast({
+        title: "Export failed",
+        description: "There was a problem generating your PDF. Please try again or refresh.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Custom data for charts
@@ -225,6 +240,18 @@ export default function VisualizationPage() {
         category: categories[productList.indexOf(item.name) % categories.length],
       })),
   ];
+
+  // Utility for hidden export: use position absolute, not display:none
+  const hiddenExportStyle = {
+    position: "absolute" as const,
+    left: "-9999px",
+    top: "-9999px",
+    visibility: "hidden" as const,
+    pointerEvents: "none" as const,
+    height: "auto",
+    width: "auto",
+    zIndex: -1,
+  };
 
   return (
     <div className="min-h-screen py-10 bg-background flex flex-col items-center">
@@ -251,21 +278,21 @@ export default function VisualizationPage() {
         >
           Custom Visualization
         </Button>
-        {customViz && selectedProducts.length > 0 && (
-          <Button
-            className="bg-cosmic-gold text-black"
-            onClick={handleDownloadPdf}
-          >
-            <Download className="w-4 mr-2" />
-            Download PDF
-          </Button>
-        )}
+        {/* Download PDF button always enabled unless exporting is ongoing */}
+        <Button
+          className="bg-cosmic-gold text-black"
+          disabled={exporting}
+          onClick={handleDownloadPdf}
+        >
+          <Download className="w-4 mr-2" />
+          {exporting ? "Exporting..." : "Download PDF"}
+        </Button>
       </div>
 
       {/* Default Visualizations */}
       <div className="flex flex-wrap gap-8 justify-center items-start mb-7 w-full max-w-5xl">
         {/* Main summary table (for PDF) */}
-        <div style={{display:"none"}}>
+        <div style={hiddenExportStyle}>
           <div ref={summaryTableRef}>
             <table className="w-full border text-slate-100 rounded-lg overflow-hidden text-base">
               <thead>
@@ -346,7 +373,7 @@ export default function VisualizationPage() {
           </div>
         </div>
       )}
-      <div style={{display: "none"}}>
+      <div style={hiddenExportStyle}>
         {/* Exportable matrix for PDF */}
         <div ref={summaryMatrixRef}>
           {/* Copy-paste the SummaryMatrix with hardcoded demo data as used in Summary */}
