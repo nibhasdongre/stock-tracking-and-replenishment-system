@@ -61,7 +61,18 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				night: {
+					1: "#0b1426",
+					2: "#182343",
+				},
+				space: {
+					5: "#111426"
+				},
+				cosmic: {
+					blue: "#72a1f7",
+					gold: "#ffd27f",
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
