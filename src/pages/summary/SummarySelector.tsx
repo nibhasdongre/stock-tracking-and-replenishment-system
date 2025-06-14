@@ -23,10 +23,16 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
 }) => {
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-center md:gap-4 mb-7 w-full px-2">
-      <div className="flex-1 flex flex-col gap-2 md:flex-row md:items-end">
-        <div className="flex gap-2 items-end w-full md:w-auto">
-          <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Month/Year:</label>
+    <div
+      className="
+        flex flex-col gap-3 sm:gap-4 w-full mb-7 px-2
+        sm:flex-row sm:flex-wrap sm:justify-between
+        md:items-center md:gap-6
+        "
+    >
+      <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-end">
+        <div className="flex gap-2 items-end w-full sm:w-auto flex-wrap">
+          <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase whitespace-nowrap">Month/Year:</label>
           <Input
             className="w-14 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
             type="text"
@@ -47,7 +53,7 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
             onChange={e => setYear(e.target.value.replace(/\D/g, ""))}
           />
           <Button
-            className="ml-0 md:ml-3 mt-2 md:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
+            className="mt-2 sm:mt-0 sm:ml-3 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold whitespace-nowrap"
             size="sm"
             onClick={onMonthly}
           >
@@ -56,9 +62,9 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
           </Button>
         </div>
       </div>
-      <div className="flex-1 flex flex-col gap-2 md:flex-row md:items-end">
-        <div className="flex items-end gap-2 w-full md:w-auto">
-          <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase">Annual report:</label>
+      <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-end">
+        <div className="flex gap-2 items-end w-full sm:w-auto flex-wrap">
+          <label className="block text-cosmic-gold font-semibold mb-1 text-xs uppercase whitespace-nowrap">Annual report:</label>
           <Input
             className="w-20 text-center font-mono text-sm bg-white/10 text-slate-50 border-cosmic-blue focus:ring-cosmic-gold"
             type="text"
@@ -71,7 +77,7 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
             max={maxYear}
           />
           <Button
-            className="ml-0 md:ml-3 mt-2 md:mt-0 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold"
+            className="mt-2 sm:mt-0 sm:ml-3 bg-cosmic-blue text-cosmic-gold hover:bg-cosmic-gold hover:text-black rounded shadow text-base font-semibold whitespace-nowrap"
             size="sm"
             onClick={onAnnual}
           >
@@ -80,10 +86,10 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
           </Button>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center mt-3 md:mt-0 md:justify-end">
+      <div className="flex w-full sm:w-auto justify-center sm:justify-end mt-3 sm:mt-0">
         <Button
           variant="outline"
-          className="border-cosmic-gold text-cosmic-gold font-semibold px-5"
+          className="border-cosmic-gold text-cosmic-gold font-semibold px-5 whitespace-nowrap"
           onClick={() => navigate("/visualization")}
           size="sm"
         >
@@ -96,3 +102,4 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
 };
 
 export default SummarySelector;
+
