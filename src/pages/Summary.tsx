@@ -14,6 +14,7 @@ import MainLineChart from "./visualization/MainLineChart";
 import { chartsDummy, trendDummy } from "./visualization/visualizationUtils";
 import SummaryTable from "./summary/SummaryTable";
 import SummarySelector from "./summary/SummarySelector";
+import SummaryActions from "./summary/SummaryActions";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -266,46 +267,23 @@ export default function Summary() {
         <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
           Sales & Quantity Summary
         </h2>
-        {/* Selector at top - visualize & download buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-5">
-          <div className="flex-1">
-            <SummarySelector
-              month={month}
-              setMonth={setMonth}
-              year={year}
-              setYear={setYear}
-              annualYear={annualYear}
-              setAnnualYear={setAnnualYear}
-              minYear={minYear}
-              maxYear={maxYear}
-              onMonthly={() => setVisibleReportType("monthly")}
-              onAnnual={() => setVisibleReportType("annual")}
-            />
-          </div>
-          <div className="flex flex-row gap-2 mt-1 sm:mt-0 justify-end">
-            <Button
-              variant="outline"
-              className="border-cosmic-gold text-cosmic-gold font-semibold px-5 whitespace-nowrap"
-              onClick={() => navigate("/visualization")}
-              size="sm"
-            >
-              <BarChartHorizontal className="w-4 mr-1" />
-              Visualize
-            </Button>
-            {visibleReportType !== "none" && (
-              <Button
-                className="bg-cosmic-gold text-black font-semibold hover:bg-cosmic-blue hover:text-cosmic-gold whitespace-nowrap flex items-center"
-                onClick={handleDownloadPdf}
-                disabled={exporting}
-                size="sm"
-                type="button"
-              >
-                <Download className="w-4 mr-2" />
-                {exporting ? "Exporting..." : "Download as PDF"}
-              </Button>
-            )}
-          </div>
-        </div>
+        {/* Actions bar: selector + buttons */}
+        <SummaryActions
+          month={month}
+          setMonth={setMonth}
+          year={year}
+          setYear={setYear}
+          annualYear={annualYear}
+          setAnnualYear={setAnnualYear}
+          minYear={minYear}
+          maxYear={maxYear}
+          onMonthly={() => setVisibleReportType("monthly")}
+          onAnnual={() => setVisibleReportType("annual")}
+          exporting={exporting}
+          onDownload={handleDownloadPdf}
+          visibleReportType={visibleReportType}
+        />
+
         {/* Top 5 / Bottom 5 Matrix */}
         <div ref={summaryMatrixRef}>
           <SummaryMatrix
