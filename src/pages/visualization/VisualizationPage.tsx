@@ -60,7 +60,7 @@ export default function VisualizationPage() {
   const summaryMonth = queryParams.get("month");
   const summaryYear = queryParams.get("year");
 
-  // Format as "Month YYYY" (e.g., "June 2025") if both params are present and valid:
+  // Always set title to show "MMMM yyyy" if both values are present and valid:
   let summaryTitle = "Visualizations";
   if (summaryMonth && summaryYear) {
     const monthInt = Number(summaryMonth);

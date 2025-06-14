@@ -81,7 +81,18 @@ export default function CustomVisualizationSection({
                   <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent
+                className="w-auto p-0 bg-white text-black rounded-lg shadow-lg border border-gray-200"
+                align="start"
+                style={{
+                  backgroundColor: "white",
+                  color: "#0b1426",
+                  zIndex: 50,
+                  minWidth: 240,
+                  boxShadow: "0 8px 32px rgba(36,40,88,0.26)",
+                  border: "1px solid #e5e7eb"
+                }}
+              >
                 <Calendar
                   mode="single"
                   selected={startDateVal}
@@ -107,7 +118,18 @@ export default function CustomVisualizationSection({
                   <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent
+                className="w-auto p-0 bg-white text-black rounded-lg shadow-lg border border-gray-200"
+                align="start"
+                style={{
+                  backgroundColor: "white",
+                  color: "#0b1426",
+                  zIndex: 50,
+                  minWidth: 240,
+                  boxShadow: "0 8px 32px rgba(36,40,88,0.26)",
+                  border: "1px solid #e5e7eb"
+                }}
+              >
                 <Calendar
                   mode="single"
                   selected={endDateVal}
