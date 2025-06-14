@@ -103,12 +103,13 @@ export default function VisualizationPage() {
   };
 
   // Renamed this variable to avoid redeclaration error
+  // Now adds 'category' calculated from the productList/categories mapping
   const demoSummaryTableData = [
-    { name: "Product Beta", quantity: 401, sales: 12050 },
-    { name: "Product Alpha", quantity: 389, sales: 11700 },
-    { name: "Product Gamma", quantity: 318, sales: 10680 },
-    { name: "Product Delta", quantity: 283, sales: 10290 },
-    { name: "Product Zeta", quantity: 269, sales: 9850 },
+    { name: "Product Beta", quantity: 401, sales: 12050, category: categories[productList.indexOf("Product Beta") % categories.length] },
+    { name: "Product Alpha", quantity: 389, sales: 11700, category: categories[productList.indexOf("Product Alpha") % categories.length] },
+    { name: "Product Gamma", quantity: 318, sales: 10680, category: categories[productList.indexOf("Product Gamma") % categories.length] },
+    { name: "Product Delta", quantity: 283, sales: 10290, category: categories[productList.indexOf("Product Delta") % categories.length] },
+    { name: "Product Zeta", quantity: 269, sales: 9850, category: categories[productList.indexOf("Product Zeta") % categories.length] },
   ];
 
   const currentDateString = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
