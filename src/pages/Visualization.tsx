@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, Legend, Cell, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -214,14 +213,30 @@ export default function Visualization() {
                 cx="50%"
                 cy="50%"
                 outerRadius={65}
-                // Remove label prop so NO product names are shown
+                // Ensures only category names are shown, no product names
+                // No label or product reference
               >
                 {mainProducts.map((entry, i) => (
                   <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip
+                // Tooltip formatter shows value only, and "Category" as label
+                formatter={(value: number, _name: string, props: any) => [value, "Value"]}
+                labelFormatter={(_, payload) => {
+                  if (payload?.length > 0) return `Category: ${payload[0].payload.category}`;
+                  return "";
+                }}
+              />
+              <Legend
+                // Legend content defaults to category
+                payload={mainProducts.map((entry, i) => ({
+                  id: entry.category,
+                  type: "rect",
+                  value: entry.category,
+                  color: pieColors[i % pieColors.length]
+                }))}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -314,21 +329,34 @@ export default function Visualization() {
                         cx="50%"
                         cy="50%"
                         outerRadius={65}
-                        // NO label, product name is not shown
+                        // Ensures only category names are shown, no product names
                       >
                         {customData.map((entry, i) => (
                           <Cell key={`cell-selectedpie-${i}`} fill={pieColors[i % pieColors.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip
+                        formatter={(value: number, _name: string, props: any) => [value, "Value"]}
+                        labelFormatter={(_, payload) => {
+                          if (payload?.length > 0) return `Category: ${payload[0].payload.category}`;
+                          return "";
+                        }}
+                      />
+                      <Legend
+                        payload={customData.map((entry, i) => ({
+                          id: entry.category,
+                          type: "rect",
+                          value: entry.category,
+                          color: pieColors[i % pieColors.length]
+                        }))}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 {/* Histogram Selected */}
                 <div className="mb-6" ref={customBarRef}>
                   <div className="font-semibold mb-2 text-cosmic-blue text-center">Histogram: {mode === "sales" ? "Sales" : "Quantity"} (Selected Products)</div>
-                  <ResponsiveContainer width={300} height={200}>
+                  <ResponsiveContainer width={340} height={220}>
                     <BarChart data={customData}>
                       <XAxis dataKey="name" />
                       <YAxis />
