@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -15,6 +14,7 @@ import CustomVisualizationSection from "./CustomVisualizationSection";
 import { categories, productList, chartsDummy, pieColors, trendDummy, getRandomInt } from "./visualizationUtils";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
+import { format } from "date-fns";
 
 export default function VisualizationPage() {
   const [mode, setMode] = useState<"sales" | "quantity">("sales");
@@ -59,17 +59,17 @@ export default function VisualizationPage() {
   const queryParams = new URLSearchParams(location.search);
   const summaryMonth = queryParams.get("month");
   const summaryYear = queryParams.get("year");
-  // Format as MonthName YYYY if present
-  const getMonthName = (numStr: string | null) => {
-    if (!numStr) return "";
-    const num = Number(numStr);
-    if (!num || isNaN(num)) return "";
-    const date = new Date(2000, num - 1, 1);
-    return date.toLocaleString('default', { month: 'long' });
-  };
-  const summaryTitle = summaryMonth && summaryYear
-    ? `${getMonthName(summaryMonth)} ${summaryYear}`
-    : "";
+
+  // Format as "Month YYYY" (e.g., "June 2025") if both params are present and valid:
+  let summaryTitle = "Visualizations";
+  if (summaryMonth && summaryYear) {
+    const monthInt = Number(summaryMonth);
+    const yearInt = Number(summaryYear);
+    if (!isNaN(monthInt) && !isNaN(yearInt) && monthInt >= 1 && monthInt <= 12) {
+      const date = new Date(yearInt, monthInt - 1, 1);
+      summaryTitle = format(date, "MMMM yyyy");
+    }
+  }
 
   // Default data for summary page (used in both summary and viz PDF)
   const matrixData = {
@@ -208,10 +208,10 @@ export default function VisualizationPage() {
   return (
     <div ref={pageRef} className="min-h-screen py-10 bg-background flex flex-col items-center">
       <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-1 uppercase font-sans">
-        {summaryTitle ? summaryTitle : "Visualizations"}
+        {summaryTitle}
       </h2>
       <div className="text-center text-cosmic-gold text-lg mb-4 font-semibold">
-        {summaryTitle && "Visualization for selected period"}
+        {summaryMonth && summaryYear ? "Visualization for selected period" : ""}
       </div>
       <div className="flex gap-4 mb-7">
         <Button

@@ -6,6 +6,13 @@ import CustomLineChart from "./CustomLineChart";
 import ProductSearchSelect from "@/components/ProductSearchSelect";
 import { categories, productList, pieColors, getRandomInt, trendDummy } from "./visualizationUtils";
 
+// Add dependencies
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
 interface Props {
   mode: "sales" | "quantity";
   selectedProducts: string[];
@@ -18,6 +25,12 @@ interface Props {
   customBarRef: React.RefObject<HTMLDivElement>;
   customLineRef: React.RefObject<HTMLDivElement>;
   customProductsTableRef: React.RefObject<HTMLDivElement>;
+}
+
+function formatToDdMmYyyy(date: Date | null | undefined) {
+  if (!date) return "";
+  const d = date;
+  return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
 }
 
 export default function CustomVisualizationSection({
@@ -42,43 +55,69 @@ export default function CustomVisualizationSection({
   }));
   const selectedTrend = trendDummy(selectedProducts);
 
-  // Date input helpers
-  const formatToDdMmYyyy = (value: string) => {
-    const d = new Date(value);
-    if (isNaN(d.getTime())) return "";
-    return d
-      .toLocaleDateString("en-GB")
-      .split("/")
-      .join("-");
-  };
+  // Convert ISO string to Date for Shadcn date picker
+  const startDateVal = startDate ? new Date(startDate) : undefined;
+  const endDateVal = endDate ? new Date(endDate) : undefined;
 
   return (
     <div className="w-full max-w-3xl mb-10">
       <div className="bg-white/10 rounded-lg p-4 my-3 mb-6 shadow">
         <div className="font-semibold mb-2 text-cosmic-blue text-center">Select up to 10 products:</div>
 
-        {/* Start / End Date - row */}
+        {/* Start / End Date - row with Shadcn UI Datepickers */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-3">
-          <label className="text-sm text-cosmic-gold font-semibold flex items-center gap-2">
-            Start Date:
-            <input
-              type="date"
-              className="rounded px-2 py-1 border border-cosmic-gold text-black"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              style={{minWidth: 140}}
-            />
-          </label>
-          <label className="text-sm text-cosmic-gold font-semibold flex items-center gap-2">
-            End Date:
-            <input
-              type="date"
-              className="rounded px-2 py-1 border border-cosmic-gold text-black"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              style={{minWidth: 140}}
-            />
-          </label>
+          {/* Start Date Picker */}
+          <div className="flex flex-col items-start gap-1 w-[180px]">
+            <label className="text-sm text-cosmic-gold font-semibold">Start Date:</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className="w-full justify-between text-left font-normal bg-white text-black"
+                >
+                  <span>
+                    {startDateVal ? formatToDdMmYyyy(startDateVal) : <span className="text-gray-400">Pick a date</span>}
+                  </span>
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDateVal}
+                  onSelect={date => date ? setStartDate(format(date, "yyyy-MM-dd")) : setStartDate("")}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          {/* End Date Picker */}
+          <div className="flex flex-col items-start gap-1 w-[180px]">
+            <label className="text-sm text-cosmic-gold font-semibold">End Date:</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className="w-full justify-between text-left font-normal bg-white text-black"
+                >
+                  <span>
+                    {endDateVal ? formatToDdMmYyyy(endDateVal) : <span className="text-gray-400">Pick a date</span>}
+                  </span>
+                  <CalendarIcon className="ml-2 h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDateVal}
+                  onSelect={date => date ? setEndDate(format(date, "yyyy-MM-dd")) : setEndDate("")}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         <ProductSearchSelect
