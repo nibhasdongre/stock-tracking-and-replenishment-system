@@ -214,8 +214,16 @@ export default function VisualizationPage() {
   // For summary table (Top5+Bottom5 with category for PDF)
   // This ensures that rows always include category (as required for the table)
   const summaryTableData = [
-    ...top5,
-    ...bottom5.filter(item => !top5.some(t => t.name === item.name)),
+    ...top5.map(item => ({
+      ...item,
+      category: categories[productList.indexOf(item.name) % categories.length],
+    })),
+    ...bottom5
+      .filter(item => !top5.some(t => t.name === item.name))
+      .map(item => ({
+        ...item,
+        category: categories[productList.indexOf(item.name) % categories.length],
+      })),
   ];
 
   return (
