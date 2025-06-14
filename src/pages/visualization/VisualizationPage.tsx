@@ -10,6 +10,7 @@ import MainLineChart from "./MainLineChart";
 import CustomPieChart from "./CustomPieChart";
 import CustomBarChart from "./CustomBarChart";
 import CustomLineChart from "./CustomLineChart";
+import CustomVisualizationSection from "./CustomVisualizationSection";
 import { categories, productList, chartsDummy, pieColors, trendDummy, getRandomInt } from "./visualizationUtils";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -17,6 +18,11 @@ export default function VisualizationPage() {
   const [mode, setMode] = useState<"sales" | "quantity">("sales");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [customViz, setCustomViz] = useState(false);
+
+  // New: state for custom viz start/end dates
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
@@ -117,7 +123,7 @@ export default function VisualizationPage() {
 
   const currentDateString = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-  // PDF Export
+  // PDF Export (update to include date range)
   const handleDownloadPdf = async () => {
     setExporting(true);
     try {
@@ -187,12 +193,34 @@ export default function VisualizationPage() {
       await renderAndAdd(mainBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)`, 340, 220, 12);
       await renderAndAdd(mainLineRef.current, `Line Chart: Annual Trend per Product (Top 5 & Bottom 5)`, 700, 260, 22);
 
-      // 6. If custom viz, show at end
+      // 6. If custom viz, show at end (INCLUDE selected date range)
       if (customViz && selectedProducts.length > 0) {
         doc.setFontSize(14);
         doc.setTextColor("#1aaf81");
         doc.text("Custom Visualization", 55, y);
         y += 16;
+
+        // Show selected date range (in dd-mm-yyyy)
+        const ddmm = (iso: string) => {
+          if (!iso) return "";
+          const d = new Date(iso);
+          return !isNaN(d.getTime())
+            ? [
+                String(d.getDate()).padStart(2, "0"),
+                String(d.getMonth() + 1).padStart(2, "0"),
+                d.getFullYear(),
+              ].join("-")
+            : "";
+        };
+        if (startDate || endDate) {
+          doc.setFontSize(12);
+          doc.setTextColor("#c7b042");
+          let range = "Date Range:";
+          if (startDate) range += ` From ${ddmm(startDate)}`;
+          if (endDate) range += ` To ${ddmm(endDate)}`;
+          doc.text(range, 55, y);
+          y += 16;
+        }
 
         // Custom selected product table
         if (customProductsTableRef.current) {
@@ -272,10 +300,24 @@ export default function VisualizationPage() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => { setCustomViz(s => !s); setSelectedProducts([]); }}
+          onClick={() => {
+            setCustomViz(s => !s);
+            setSelectedProducts([]);
+            setStartDate("");
+            setEndDate("");
+          }}
           className="border-cosmic-gold text-cosmic-gold"
         >
           Custom Visualization
+        </Button>
+        <Button
+          variant="outline"
+          className="border-cosmic-gold text-cosmic-gold whitespace-nowrap font-semibold"
+          size="sm"
+          onClick={handleDownloadPdf}
+          disabled={exporting}
+        >
+          {exporting ? "Exporting..." : "Download as PDF"}
         </Button>
       </div>
 
@@ -318,50 +360,19 @@ export default function VisualizationPage() {
       </div>
       {/* Custom Viz */}
       {customViz && (
-        <div className="w-full max-w-3xl mb-10">
-          <div className="bg-white/10 rounded-lg p-4 my-3 mb-6 shadow">
-            <div className="font-semibold mb-2 text-cosmic-blue text-center">Select up to 10 products:</div>
-            <ProductSearchSelect
-              allProducts={productList}
-              selectedProducts={selectedProducts}
-              max={10}
-              onChange={setSelectedProducts}
-            />
-            {selectedProducts.length > 0 && (
-              <div ref={customProductsTableRef}>
-                <table className="w-full text-left border rounded overflow-hidden text-slate-100 bg-black/60 mt-4">
-                  <thead className="bg-cosmic-blue text-black">
-                    <tr>
-                      <th className="p-2">Product</th>
-                      <th className="p-2">Category</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedProducts.map((prod, i) => (
-                      <tr key={i}>
-                        <td className="p-2">{prod}</td>
-                        <td className="p-2">{categories[productList.indexOf(prod)%categories.length]}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {selectedProducts.length > 0 && (
-              <div className="my-5 bg-white/5 rounded-lg p-5">
-                <div ref={customPieRef}>
-                  <CustomPieChart data={customData} mode={mode} />
-                </div>
-                <div ref={customBarRef}>
-                  <CustomBarChart data={customData} mode={mode} />
-                </div>
-                <div ref={customLineRef}>
-                  <CustomLineChart selectedProducts={selectedProducts} trendData={selectedTrend} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <CustomVisualizationSection
+          mode={mode}
+          selectedProducts={selectedProducts}
+          setSelectedProducts={setSelectedProducts}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          customPieRef={customPieRef}
+          customBarRef={customBarRef}
+          customLineRef={customLineRef}
+          customProductsTableRef={customProductsTableRef}
+        />
       )}
       <div style={hiddenExportStyle}>
         {/* Exportable matrix for PDF */}
