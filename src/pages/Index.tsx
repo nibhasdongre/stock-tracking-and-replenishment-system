@@ -1,14 +1,50 @@
-// Update this page (the content is just a fallback if you fail to update the page)
 
-const Index = () => {
+import { useState } from "react";
+import HeaderNav from "@/components/HeaderNav";
+import DashboardCards from "@/components/DashboardCards";
+import ProductTable from "@/components/ProductTable";
+import ActionToolbar from "@/components/ActionToolbar";
+import { useNavigate } from "react-router-dom";
+
+export default function Index() {
+  const [selection, setSelection] = useState<string[]>([]);
+  const navigate = useNavigate();
+
+  function handleAdd() {
+    // Open add modal (to be implemented)
+    alert("Add Product modal coming soon!");
+  }
+
+  function handleDelete() {
+    if (selection.length === 0) return;
+    alert(`Delete: ${selection.join(", ")}`);
+    setSelection([]);
+  }
+
+  function handleSendEmail() {
+    alert("Replenishment emails sent (soon)!");
+  }
+
+  function onDeleteSelection(ids: string[]) {
+    setSelection(sel => sel.filter(sid => !ids.includes(sid)));
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <HeaderNav />
+      <main className="max-w-screen-2xl mx-auto px-6 pt-8 pb-20 animate-fade-in">
+        <h2 className="text-3xl font-bold mb-4">Inventory & Stock</h2>
+        <DashboardCards />
+        <section className="bg-card rounded-lg shadow border">
+          <ActionToolbar
+            onAdd={handleAdd}
+            onDelete={handleDelete}
+            onSendEmail={handleSendEmail}
+            selectedCount={selection.length}
+          />
+          <ProductTable onDeleteSelection={onDeleteSelection} />
+        </section>
+      </main>
     </div>
   );
-};
-
-export default Index;
+}
