@@ -1,6 +1,6 @@
 
 import React from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { pieColors } from "./visualizationUtils";
 
 interface MainPieChartProps {
@@ -19,30 +19,22 @@ export default function MainPieChart({ data, mode }: MainPieChartProps) {
           <Pie
             data={data}
             dataKey={mode}
-            nameKey="category"
+            // No nameKey provided to Pie; no names should show for slices
             cx="50%"
             cy="50%"
             outerRadius={65}
+            label={false}
           >
             {data.map((entry, i) => (
               <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number, _name: string) => [value, "Value"]}
-            labelFormatter={(_, payload) => {
-              if (payload?.length > 0) return `Category: ${payload[0].payload.category}`;
-              return "";
-            }}
+            // Only show value in tooltip, not name/category
+            formatter={(value: number) => [value, "Value"]}
+            labelFormatter={() => ""}
           />
-          <Legend
-            payload={data.map((entry, i) => ({
-              id: entry.category,
-              type: "rect",
-              value: entry.category,
-              color: pieColors[i % pieColors.length]
-            }))}
-          />
+          {/* No legend so that product/category names never display */}
         </PieChart>
       </ResponsiveContainer>
     </div>
