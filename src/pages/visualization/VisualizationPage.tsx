@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -13,6 +14,7 @@ import CustomLineChart from "./CustomLineChart";
 import CustomVisualizationSection from "./CustomVisualizationSection";
 import { categories, productList, chartsDummy, pieColors, trendDummy, getRandomInt } from "./visualizationUtils";
 import { useToast } from "@/components/ui/use-toast";
+import { useLocation } from "react-router-dom";
 
 export default function VisualizationPage() {
   const [mode, setMode] = useState<"sales" | "quantity">("sales");
@@ -49,35 +51,25 @@ export default function VisualizationPage() {
   // Prepare: Refs for summary matrix (for image export)
   const summaryMatrixRef = useRef<HTMLDivElement>(null);
 
-  // Helper to render a matrix image, similar to Summary page
-  const renderAndAddMatrix = async (doc: any, element: HTMLDivElement | null, title: string, maxW: number, maxH: number, y: number, opts: {center?:boolean} = {}) => {
-    if (!element) return y;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const canvas = await html2canvas(element, {
-      backgroundColor: "#18181b",
-      scale: 2,
-      useCORS: true,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
-    });
-    const imgData = canvas.toDataURL("image/png");
-    let imgWidth = canvas.width;
-    let imgHeight = canvas.height;
-    let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
-    imgWidth = imgWidth * scale;
-    imgHeight = imgHeight * scale;
-    doc.setFontSize(13);
-    doc.setTextColor("#1566B8");
-    if (opts.center) {
-      doc.text(title, pageWidth / 2, y, {align: "center"});
-    } else {
-      doc.text(title, 55, y);
-    }
-    y += 16;
-    doc.addImage(imgData, "PNG", opts.center ? (pageWidth - imgWidth) / 2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
-    y += imgHeight + 12;
-    return y;
+  // Ref to visualize the WHOLE page for PDF
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  // --- Read the search params for month and year from Summary page, if present
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const summaryMonth = queryParams.get("month");
+  const summaryYear = queryParams.get("year");
+  // Format as MonthName YYYY if present
+  const getMonthName = (numStr: string | null) => {
+    if (!numStr) return "";
+    const num = Number(numStr);
+    if (!num || isNaN(num)) return "";
+    const date = new Date(2000, num - 1, 1);
+    return date.toLocaleString('default', { month: 'long' });
   };
+  const summaryTitle = summaryMonth && summaryYear
+    ? `${getMonthName(summaryMonth)} ${summaryYear}`
+    : "";
 
   // Default data for summary page (used in both summary and viz PDF)
   const matrixData = {
@@ -123,116 +115,50 @@ export default function VisualizationPage() {
 
   const currentDateString = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 
-  // PDF Export (update to include date range)
+  // PDF Export (new: capture whole visible visualization page!)
   const handleDownloadPdf = async () => {
     setExporting(true);
     try {
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 30;
+      if (!pageRef.current) throw new Error("Visualization page not available for export");
 
-      // 1. Title
-      doc.setFontSize(20);
-      doc.setTextColor("#1566B8");
-      doc.text("Visualizations Report", pageWidth / 2, y, { align: "center" });
+      // Render the entire visible main container
+      const canvas = await html2canvas(pageRef.current, {
+        backgroundColor: "#18181b",
+        scale: 2,
+        useCORS: true,
+        width: pageRef.current.scrollWidth,
+        height: pageRef.current.scrollHeight,
+        windowWidth: pageRef.current.scrollWidth,
+        windowHeight: pageRef.current.scrollHeight,
+      });
 
-      y += 30;
-      // 2. Subtitle: date & mode
-      doc.setFontSize(12);
-      doc.setTextColor("#111");
-      doc.text(
-        `Mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)} | Generated: ${currentDateString}`,
-        pageWidth / 2,
-        y,
-        { align: "center" }
+      const imgData = canvas.toDataURL("image/png");
+      // Calculate pdf page size and scale
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: "a4",
+      });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      let imgWidth = canvas.width;
+      let imgHeight = canvas.height;
+      // scale down if image is larger than page
+      const scale = Math.min(pageWidth / imgWidth, pageHeight / imgHeight, 1);
+
+      imgWidth = imgWidth * scale;
+      imgHeight = imgHeight * scale;
+
+      pdf.addImage(
+        imgData,
+        "PNG",
+        (pageWidth - imgWidth) / 2,
+        (pageHeight - imgHeight) / 2,
+        imgWidth,
+        imgHeight
       );
-      y += 22;
-
-      // Helper for image capture (no cropping)
-      const renderAndAdd = async (element: HTMLDivElement | null, title: string, maxW: number, maxH: number, gap: number = 10, opts: {center?:boolean} = {}) => {
-        if (!element) return;
-        const canvas = await html2canvas(element, {
-          backgroundColor: "#18181b",
-          scale: 2,
-          useCORS: true,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight,
-        });
-        const imgData = canvas.toDataURL("image/png");
-        let imgWidth = canvas.width;
-        let imgHeight = canvas.height;
-
-        let scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
-        imgWidth = imgWidth * scale;
-        imgHeight = imgHeight * scale;
-
-        doc.setFontSize(13);
-        doc.setTextColor("#1566B8");
-        if (opts.center) {
-          doc.text(title, pageWidth / 2, y, { align: "center" });
-        } else {
-          doc.text(title, 55, y);
-        }
-        y += 16;
-        doc.addImage(imgData, "PNG", opts.center ? (pageWidth - imgWidth) / 2 : 55, y, imgWidth, imgHeight, undefined, "FAST");
-        y += imgHeight + gap;
-      };
-
-      // 3. Matrix (SummaryMatrix as image)
-      if (summaryMatrixRef.current) {
-        y = await renderAndAddMatrix(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
-      }
-
-      // 4. Main summary table
-      if (summaryTableRef.current) {
-        await renderAndAdd(summaryTableRef.current, "Summary Table", pageWidth-80, 170, 12, {center:true});
-      }
-
-      // 5. Default Visualizations (Pie, Bar, Line)
-      await renderAndAdd(mainPieRef.current, `Pie Chart: Product Category Distribution (Top 5 & Bottom 5)`, 340, 220, 12);
-      await renderAndAdd(mainBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} per Product (Top 5 & Bottom 5)`, 340, 220, 12);
-      await renderAndAdd(mainLineRef.current, `Line Chart: Annual Trend per Product (Top 5 & Bottom 5)`, 700, 260, 22);
-
-      // 6. If custom viz, show at end (INCLUDE selected date range)
-      if (customViz && selectedProducts.length > 0) {
-        doc.setFontSize(14);
-        doc.setTextColor("#1aaf81");
-        doc.text("Custom Visualization", 55, y);
-        y += 16;
-
-        // Show selected date range (in dd-mm-yyyy)
-        const ddmm = (iso: string) => {
-          if (!iso) return "";
-          const d = new Date(iso);
-          return !isNaN(d.getTime())
-            ? [
-                String(d.getDate()).padStart(2, "0"),
-                String(d.getMonth() + 1).padStart(2, "0"),
-                d.getFullYear(),
-              ].join("-")
-            : "";
-        };
-        if (startDate || endDate) {
-          doc.setFontSize(12);
-          doc.setTextColor("#c7b042");
-          let range = "Date Range:";
-          if (startDate) range += ` From ${ddmm(startDate)}`;
-          if (endDate) range += ` To ${ddmm(endDate)}`;
-          doc.text(range, 55, y);
-          y += 16;
-        }
-
-        // Custom selected product table
-        if (customProductsTableRef.current) {
-          await renderAndAdd(customProductsTableRef.current, "Selected Products Table", 350, 160, 15);
-        }
-        // Custom charts
-        await renderAndAdd(customPieRef.current, "Pie: Product Categories (Selected)", 340, 220, 10);
-        await renderAndAdd(customBarRef.current, `Histogram: ${mode === "sales" ? "Sales" : "Quantity"} (Selected Products)`, 340, 220, 10);
-        await renderAndAdd(customLineRef.current, "Line: Trend (Selected Products)", 700, 230, 16);
-      }
-
-      doc.save("Visualizations_Report.pdf");
+      pdf.save("Visualization_Page.pdf");
     } catch (err: any) {
       console.error("PDF export failed:", err);
       toast({
@@ -254,7 +180,6 @@ export default function VisualizationPage() {
   }));
 
   // For summary table (Top5+Bottom5 with category for PDF)
-  // This ensures that rows always include category (as required for the table)
   const summaryTableData = [
     ...top5.map(item => ({
       ...item,
@@ -281,10 +206,13 @@ export default function VisualizationPage() {
   };
 
   return (
-    <div className="min-h-screen py-10 bg-background flex flex-col items-center">
-      <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-3 uppercase font-sans">
-        Visualizations
+    <div ref={pageRef} className="min-h-screen py-10 bg-background flex flex-col items-center">
+      <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-1 uppercase font-sans">
+        {summaryTitle ? summaryTitle : "Visualizations"}
       </h2>
+      <div className="text-center text-cosmic-gold text-lg mb-4 font-semibold">
+        {summaryTitle && "Visualization for selected period"}
+      </div>
       <div className="flex gap-4 mb-7">
         <Button
           className={mode === "sales" ? "bg-cosmic-blue text-cosmic-gold" : ""}
@@ -323,7 +251,6 @@ export default function VisualizationPage() {
 
       {/* Default Visualizations */}
       <div className="flex flex-wrap gap-8 justify-center items-start mb-7 w-full max-w-5xl">
-        {/* Main summary table (for PDF) */}
         <div style={hiddenExportStyle}>
           <div ref={summaryTableRef}>
             <table className="w-full border text-slate-100 rounded-lg overflow-hidden text-base">
