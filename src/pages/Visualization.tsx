@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import ProductSearchSelect from "@/components/ProductSearchSelect";
 
 // Dummy categories and product names
 const categories = ["Electronics", "Apparel", "Toys", "Home", "Books"];
@@ -279,25 +280,15 @@ export default function Visualization() {
         <div className="w-full max-w-3xl mb-10">
           <div className="bg-white/10 rounded-lg p-4 my-3 mb-6 shadow">
             <div className="font-semibold mb-2 text-cosmic-blue text-center">Select up to 10 products:</div>
-            <div className="flex flex-wrap gap-2 justify-center mb-3">
-              {productList.map(prod => (
-                <Button
-                  key={prod}
-                  size="sm"
-                  variant={selectedProducts.includes(prod) ? "default" : "outline"}
-                  className={selectedProducts.includes(prod) ? "bg-cosmic-gold text-black" : ""}
-                  onClick={() => handleProductToggle(prod)}
-                >
-                  {prod}
-                </Button>
-              ))}
-            </div>
-            <div className="text-center mb-2 text-xs text-cosmic-gold">
-              {selectedProducts.length} selected / 10 max
-            </div>
+            <ProductSearchSelect
+              allProducts={productList}
+              selectedProducts={selectedProducts}
+              max={10}
+              onChange={setSelectedProducts}
+            />
             {/* Table of selected */}
             {selectedProducts.length > 0 && (
-              <table className="w-full text-left border rounded overflow-hidden text-slate-100 bg-black/60">
+              <table className="w-full text-left border rounded overflow-hidden text-slate-100 bg-black/60 mt-4">
                 <thead className="bg-cosmic-blue text-black">
                   <tr>
                     <th className="p-2">Product</th>
