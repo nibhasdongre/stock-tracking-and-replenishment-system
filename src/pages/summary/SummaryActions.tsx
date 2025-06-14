@@ -54,7 +54,6 @@ export default function SummaryActions({
           onAnnual={onAnnual}
         />
       </div>
-      {/* Actions */}
       <div className="flex flex-row gap-2 mt-1 sm:mt-0 justify-end">
         <Button
           variant="outline"
