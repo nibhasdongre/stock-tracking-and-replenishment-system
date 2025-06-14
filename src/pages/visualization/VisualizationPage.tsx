@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -277,15 +276,6 @@ export default function VisualizationPage() {
           className="border-cosmic-gold text-cosmic-gold"
         >
           Custom Visualization
-        </Button>
-        {/* Download PDF button always enabled unless exporting is ongoing */}
-        <Button
-          className="bg-cosmic-gold text-black"
-          disabled={exporting}
-          onClick={handleDownloadPdf}
-        >
-          <Download className="w-4 mr-2" />
-          {exporting ? "Exporting..." : "Download PDF"}
         </Button>
       </div>
 

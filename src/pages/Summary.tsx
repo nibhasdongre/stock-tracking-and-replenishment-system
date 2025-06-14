@@ -259,7 +259,20 @@ export default function Summary() {
         <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
           Sales & Quantity Summary
         </h2>
-        {/* Matrix */}
+        {/* Selector at top */}
+        <SummarySelector
+          month={month}
+          setMonth={setMonth}
+          year={year}
+          setYear={setYear}
+          annualYear={annualYear}
+          setAnnualYear={setAnnualYear}
+          minYear={minYear}
+          maxYear={maxYear}
+          onMonthly={() => setVisibleReportType("monthly")}
+          onAnnual={() => setVisibleReportType("annual")}
+        />
+        {/* 5/5 Matrix next */}
         <div ref={summaryMatrixRef}>
           <SummaryMatrix
             topQuantity={topQuantity}
@@ -268,6 +281,16 @@ export default function Summary() {
             bottomSales={bottomSales}
           />
         </div>
+        {/* Summary Table at bottom */}
+        {visibleReportType !== "none" && (
+          <div className="mt-8">
+            <SummaryTable
+              tableTitle={tableTitle}
+              tableData={tableData}
+              summaryTableRef={summaryTableRef}
+            />
+          </div>
+        )}
         {/* Hidden Visual Chart Refs */}
         <div style={{ display: "none" }}>
           <div ref={pieRef}>
@@ -287,38 +310,6 @@ export default function Summary() {
             />
           </div>
         </div>
-        {/* Selector */}
-        <SummarySelector
-          month={month}
-          setMonth={setMonth}
-          year={year}
-          setYear={setYear}
-          annualYear={annualYear}
-          setAnnualYear={setAnnualYear}
-          minYear={minYear}
-          maxYear={maxYear}
-          onMonthly={() => setVisibleReportType("monthly")}
-          onAnnual={() => setVisibleReportType("annual")}
-        />
-        {/* Report table */}
-        {visibleReportType !== "none" && (
-          <div className="mt-8">
-            {/* Summary Table */}
-            <SummaryTable
-              tableTitle={tableTitle}
-              tableData={tableData}
-              summaryTableRef={summaryTableRef}
-            />
-            <Button
-              className="mt-5 flex items-center bg-cosmic-gold text-black font-semibold hover:bg-cosmic-blue hover:text-cosmic-gold"
-              onClick={handleDownloadPdf}
-              size="sm"
-            >
-              <Download className="w-4 mr-2" />
-              Download as PDF
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
