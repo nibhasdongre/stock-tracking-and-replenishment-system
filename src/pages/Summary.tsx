@@ -1,20 +1,16 @@
 import React, { useState, useRef } from "react";
 import StarBackground from "@/components/StarBackground";
 import SummaryMatrix from "@/components/SummaryMatrix";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
-import { CalendarIcon, BarChartHorizontal, Download } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import html2canvas from "html2canvas";
+import SummaryTable from "./summary/SummaryTable";
+import SummaryActions from "./summary/SummaryActions";
 import MainPieChart from "./visualization/MainPieChart";
 import MainBarChart from "./visualization/MainBarChart";
 import MainLineChart from "./visualization/MainLineChart";
 import { chartsDummy, trendDummy } from "./visualization/visualizationUtils";
-import SummaryTable from "./summary/SummaryTable";
-import SummarySelector from "./summary/SummarySelector";
-import SummaryActions from "./summary/SummaryActions";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
+import { useNavigate } from "react-router-dom";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -183,12 +179,10 @@ export default function Summary() {
       const pageWidth = doc.internal.pageSize.getWidth();
       let y = 40;
 
-      // Title
       doc.setFontSize(18);
       doc.setTextColor("#1566B8");
       doc.text(tableTitle, pageWidth / 2, y, { align: "center" });
 
-      // Date & Period
       y += 20;
       doc.setFontSize(11);
       doc.setTextColor("#222");
@@ -200,11 +194,10 @@ export default function Summary() {
 
       y += 18;
 
-      // Top 5/Bottom 5 Matrix image
       if (summaryMatrixRef.current) {
         y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
       } else {
-        // fallback: autoTable for matrix if not present (edge case)
+        // fallback: autoTable for matrix if not present
         y += 8;
         autoTable(doc, {
           startY: y,
@@ -240,12 +233,10 @@ export default function Summary() {
         y = (doc as any).lastAutoTable.finalY + 12;
       }
 
-      // Add main summary table as image
       if (summaryTableRef.current) {
         y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
       }
 
-      // Visualizations (Pie, Bar, Line)
       y = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 340, 220, y);
       y = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 340, 220, y);
       y = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 700, 230, y);
@@ -267,7 +258,7 @@ export default function Summary() {
         <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
           Sales & Quantity Summary
         </h2>
-        {/* Actions bar: selector + buttons */}
+        {/* Actions bar: only one Visualize and one Download button */}
         <SummaryActions
           month={month}
           setMonth={setMonth}
@@ -284,7 +275,6 @@ export default function Summary() {
           visibleReportType={visibleReportType}
         />
 
-        {/* Top 5 / Bottom 5 Matrix */}
         <div ref={summaryMatrixRef}>
           <SummaryMatrix
             topQuantity={topQuantity}
@@ -293,7 +283,6 @@ export default function Summary() {
             bottomSales={bottomSales}
           />
         </div>
-        {/* Summary Table below */}
         {visibleReportType !== "none" && (
           <div className="mt-8">
             <SummaryTable
