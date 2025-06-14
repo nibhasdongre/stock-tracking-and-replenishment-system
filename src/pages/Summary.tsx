@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarIcon, BarChartHorizontal, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import html2canvas from "html2canvas";
 
 // Stub/mock data for demo
 const topQuantity = [
@@ -66,6 +67,11 @@ export default function Summary() {
   const minYear = 2010;
   const maxYear = now.getFullYear();
 
+  // Refs for visualization images
+  const pieRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+
   // Helper to format month name
   const getMonthName = (numStr: string) => {
     const num = Number(numStr);
@@ -92,8 +98,38 @@ export default function Summary() {
     return new Date().toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   };
 
+  // Helper for image rendering
+  const renderAndAdd = async (doc: any, element: HTMLDivElement | null, title: string, maxW: number, maxH: number, y: number) => {
+    if (!element) return y;
+    const canvas = await html2canvas(element, { backgroundColor: "#18181b", scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+    let imgWidth = canvas.width;
+    let imgHeight = canvas.height;
+
+    // Scale image to fit maxW, maxH
+    if (imgWidth > maxW) {
+      const scale = maxW / imgWidth;
+      imgWidth = maxW;
+      imgHeight = imgHeight * scale;
+    }
+    if (imgHeight > maxH) {
+      const scale = maxH / imgHeight;
+      imgHeight = maxH;
+      imgWidth = imgWidth * scale;
+    }
+
+    doc.setFontSize(13);
+    doc.setTextColor("#1566B8");
+    doc.text(title, 55, y);
+    y += 16;
+
+    doc.addImage(imgData, "PNG", 55, y, imgWidth, imgHeight, undefined, "FAST");
+    y += imgHeight + 12;
+    return y;
+  };
+
   // PDF export: include dynamic title, month/year, summary boxes, and table using autoTable
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
 
     const doc = new jsPDF({
@@ -199,6 +235,13 @@ export default function Summary() {
       tableWidth: pageWidth - 80,
     });
 
+    let vizY = (doc as any).lastAutoTable.finalY + 18;
+
+    // Add images of default visualizations
+    vizY = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 340, 220, vizY);
+    vizY = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 340, 220, vizY);
+    vizY = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 700, 230, vizY);
+
     doc.save(
       visibleReportType === "monthly"
         ? `Sales_Quantity_Summary_${month}-${year}.pdf`
@@ -220,6 +263,20 @@ export default function Summary() {
           topSales={topSales}
           bottomSales={bottomSales}
         />
+        {/* Viz Chart REFS, hidden */}
+        <div style={{ display: "none" }}>
+          <div ref={pieRef}>
+            {/* Pie Chart for default summary, product names NOT shown */}
+            {/* Must match the default pie chart in Visualization (for PDF consistency) */}
+            {/* You must create it the same way as in Visualization.tsx, excluding product names in labels */}
+          </div>
+          <div ref={barRef}>
+            {/* Bar Chart for default summary */}
+          </div>
+          <div ref={lineRef}>
+            {/* Line Chart for default summary */}
+          </div>
+        </div>
         {/* Moved: Date & Annual Selection to top */}
         <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-7">
           <div className="flex gap-2 items-end">

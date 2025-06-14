@@ -84,7 +84,7 @@ export default function Visualization() {
   const customBarRef = useRef<HTMLDivElement>(null);
   const customLineRef = useRef<HTMLDivElement>(null);
 
-  // PDF Export with images
+  // PDF Export with images (only appears when customViz and products selected)
   const handleDownloadPdf = async () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -121,7 +121,6 @@ export default function Visualization() {
         imgWidth = imgWidth * scale;
       }
 
-      // Add title
       doc.setFontSize(13);
       doc.setTextColor("#1566B8");
       doc.text(title, 55, y);
@@ -189,13 +188,16 @@ export default function Visualization() {
         >
           Custom Visualization
         </Button>
-        <Button
-          className="bg-cosmic-gold text-black"
-          onClick={handleDownloadPdf}
-        >
-          <Download className="w-4 mr-2" />
-          Download PDF
-        </Button>
+        {/* Download PDF button for custom viz only */}
+        {customViz && selectedProducts.length > 0 && (
+          <Button
+            className="bg-cosmic-gold text-black"
+            onClick={handleDownloadPdf}
+          >
+            <Download className="w-4 mr-2" />
+            Download PDF
+          </Button>
+        )}
       </div>
 
       {/* Default Visualizations (Top 5 & Bottom 5 combined) */}
@@ -205,7 +207,15 @@ export default function Visualization() {
           <div className="font-semibold mb-2 text-cosmic-blue text-center">Pie: Product Categories (Top 5 & Bottom 5)</div>
           <ResponsiveContainer width={300} height={200}>
             <PieChart>
-              <Pie data={mainProducts} dataKey={mode} nameKey="category" cx="50%" cy="50%" outerRadius={65} label>
+              <Pie
+                data={mainProducts}
+                dataKey={mode}
+                nameKey="category"
+                cx="50%"
+                cy="50%"
+                outerRadius={65}
+                // Remove label prop so NO product names are shown
+              >
                 {mainProducts.map((entry, i) => (
                   <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
                 ))}
@@ -297,7 +307,15 @@ export default function Visualization() {
                   <div className="font-semibold mb-2 text-cosmic-blue text-center">Pie: Product Categories (Selected)</div>
                   <ResponsiveContainer width={300} height={200}>
                     <PieChart>
-                      <Pie data={customData} dataKey={mode} nameKey="category" cx="50%" cy="50%" outerRadius={65} label>
+                      <Pie
+                        data={customData}
+                        dataKey={mode}
+                        nameKey="category"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={65}
+                        // NO label, product name is not shown
+                      >
                         {customData.map((entry, i) => (
                           <Cell key={`cell-selectedpie-${i}`} fill={pieColors[i % pieColors.length]} />
                         ))}
