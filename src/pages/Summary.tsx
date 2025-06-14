@@ -58,7 +58,7 @@ const dummyAnnualReport = [
   { name: "Product Beta", quantity: 401, sales: 12050 },
   { name: "Product Alpha", quantity: 389, sales: 11700 },
   { name: "Product Gamma", quantity: 318, sales: 10680 },
-  { name: "Product Delta", value: 283, sales: 10290 },
+  { name: "Product Delta", quantity: 283, sales: 10290 },
   { name: "Product Zeta", quantity: 269, sales: 9850 },
 ];
 
@@ -93,17 +93,28 @@ export default function Summary() {
   const productToSummary = (arr: { name: string; value: number }[]) =>
     arr.map(p => ({ name: p.name, quantity: p.value, sales: 0 }));
 
+  // Helper to ensure all report data have consistent { name, quantity, sales }
+  const normalizeTableData = (
+    arr: Array<{ name: string; value?: number; quantity?: number; sales: number }>
+  ): { name: string; quantity: number; sales: number }[] =>
+    arr.map(item => ({
+      name: item.name,
+      quantity: item.quantity ?? item.value ?? 0,
+      sales: item.sales ?? 0,
+    }));
+
   // Decide report table title and data
   let tableTitle = "";
   let tableData: { name: string; quantity: number; sales: number }[] = [];
   let subTitle = "";
   if (visibleReportType === "monthly") {
     tableTitle = `Sales & Quantity Summary - ${getMonthName(month)} ${year}`;
-    tableData = dummyMonthlyReport;
+    // Use normalizeTableData to make sure types align
+    tableData = normalizeTableData(dummyMonthlyReport);
     subTitle = `Month/Year: ${getMonthName(month)} ${year}`;
   } else if (visibleReportType === "annual") {
     tableTitle = `Sales & Quantity Summary - ${annualYear}`;
-    tableData = dummyAnnualReport;
+    tableData = normalizeTableData(dummyAnnualReport);
     subTitle = `Year: ${annualYear}`;
   }
 
