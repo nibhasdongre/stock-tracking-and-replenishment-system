@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +7,7 @@ import StarBackground from "@/components/StarBackground";
 import { Rocket, Star } from "lucide-react";
 import PasswordGate from "@/components/PasswordGate";
 import InvalidRequestDialog from "@/components/InvalidRequestDialog";
+import { useSessionAccess } from "@/hooks/useSessionAccess";
 
 export default function MonthSelector() {
   const now = new Date();
@@ -17,6 +17,7 @@ export default function MonthSelector() {
   const [touched, setTouched] = useState(false);
   const [invalidDialogOpen, setInvalidDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const { accessLevel } = useSessionAccess();
 
   // Allowed range for year
   const minYear = 2010;
@@ -105,14 +106,16 @@ export default function MonthSelector() {
               >
                 View Current Month
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setInvalidDialogOpen(true)}
-                className="w-1/2 border-cosmic-gold text-cosmic-gold"
-                type="button"
-              >
-                Summarize
-              </Button>
+              {accessLevel === "L3" && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/summary")}
+                  className="w-1/2 border-cosmic-gold text-cosmic-gold"
+                  type="button"
+                >
+                  Summarize
+                </Button>
+              )}
               <InvalidRequestDialog
                 open={invalidDialogOpen}
                 onOpenChange={setInvalidDialogOpen}
