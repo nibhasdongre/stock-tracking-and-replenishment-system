@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import PasswordGate from "@/components/PasswordGate";
 import StarBackground from "@/components/StarBackground";
 import { Button } from "@/components/ui/button";
 import LogRequestsDrawer from "@/components/LogRequestsDrawer";
@@ -79,61 +79,63 @@ export default function EditItems() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
-      <StarBackground />
-      <LogRequestsDrawer
-        open={logDrawer}
-        requests={logs}
-        onClose={() => setLogDrawer(false)}
-        onApprove={handleApproveLog}
-        onReject={handleRejectLog}
-      />
-      <ItemFormDialog open={formOpen} onClose={() => setFormOpen(false)} onSubmit={handleAddItem} />
-      <div className="relative z-10 w-full max-w-2xl mx-auto bg-black/70 shadow rounded-xl p-8 border border-cosmic-blue animate-fade-in">
-        <h2 className="text-2xl font-bold mb-6 text-cosmic-blue">Edit Items</h2>
-        <div className="flex flex-wrap gap-3 mb-6">
-          <Button variant="default" onClick={() => setFormOpen(true)}>Add Item</Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={selected.length === 0}>Delete Item{selected.length > 0 && ` (${selected.length})`}</Button>
-          <Button variant="outline" onClick={handleViewRequests}>View Requests</Button>
-          <Button variant="secondary" onClick={handleSave}>Save</Button>
-        </div>
-        <table className="w-full bg-black/70 rounded shadow text-left border border-cosmic-blue animate-fade-in">
-          <thead>
-            <tr>
-              <th className="px-4 py-2">
-                <input type="checkbox"
-                  checked={selected.length === data.length && data.length > 0}
-                  onChange={() =>
-                    setSelected(selected.length === data.length ? [] : data.map(row => row.id))
-                  }
-                  aria-label="Select all"
-                />
-              </th>
-              <th className="px-4 py-2">Item</th>
-              <th className="px-4 py-2">Category</th>
-              <th className="px-4 py-2 text-right">Qty</th>
-              <th className="px-4 py-2 text-right">Min Stock</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(row => (
-              <tr key={row.id} className={selected.includes(row.id) ? "bg-accent/50" : "hover:bg-muted"}>
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(row.id)}
-                    onChange={() => handleSelect(row.id)}
+    <PasswordGate gateId="edit" password="stars2024">
+      <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
+        <StarBackground />
+        <LogRequestsDrawer
+          open={logDrawer}
+          requests={logs}
+          onClose={() => setLogDrawer(false)}
+          onApprove={handleApproveLog}
+          onReject={handleRejectLog}
+        />
+        <ItemFormDialog open={formOpen} onClose={() => setFormOpen(false)} onSubmit={handleAddItem} />
+        <div className="relative z-10 w-full max-w-2xl mx-auto bg-black/70 shadow rounded-xl p-8 border border-cosmic-blue animate-fade-in">
+          <h2 className="text-2xl font-bold mb-6 text-cosmic-blue">Edit Items</h2>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Button variant="default" onClick={() => setFormOpen(true)}>Add Item</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={selected.length === 0}>Delete Item{selected.length > 0 && ` (${selected.length})`}</Button>
+            <Button variant="outline" onClick={handleViewRequests}>View Requests</Button>
+            <Button variant="secondary" onClick={handleSave}>Save</Button>
+          </div>
+          <table className="w-full bg-black/70 rounded shadow text-left border border-cosmic-blue animate-fade-in">
+            <thead>
+              <tr>
+                <th className="px-4 py-2">
+                  <input type="checkbox"
+                    checked={selected.length === data.length && data.length > 0}
+                    onChange={() =>
+                      setSelected(selected.length === data.length ? [] : data.map(row => row.id))
+                    }
+                    aria-label="Select all"
                   />
-                </td>
-                <td className="px-4 py-2">{row.item}</td>
-                <td className="px-4 py-2">{row.category}</td>
-                <td className="px-4 py-2 text-right">{row.qty}</td>
-                <td className="px-4 py-2 text-right">{row.minStock}</td>
+                </th>
+                <th className="px-4 py-2">Item</th>
+                <th className="px-4 py-2">Category</th>
+                <th className="px-4 py-2 text-right">Qty</th>
+                <th className="px-4 py-2 text-right">Min Stock</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map(row => (
+                <tr key={row.id} className={selected.includes(row.id) ? "bg-accent/50" : "hover:bg-muted"}>
+                  <td className="px-4 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(row.id)}
+                      onChange={() => handleSelect(row.id)}
+                    />
+                  </td>
+                  <td className="px-4 py-2">{row.item}</td>
+                  <td className="px-4 py-2">{row.category}</td>
+                  <td className="px-4 py-2 text-right">{row.qty}</td>
+                  <td className="px-4 py-2 text-right">{row.minStock}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </PasswordGate>
   );
 }
