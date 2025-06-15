@@ -2,7 +2,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, BarChartHorizontal } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type SummarySelectorProps = {
@@ -21,7 +21,7 @@ type SummarySelectorProps = {
 const SummarySelector: React.FC<SummarySelectorProps> = ({
   month, setMonth, year, setYear, annualYear, setAnnualYear, minYear, maxYear, onMonthly, onAnnual
 }) => {
-  const navigate = useNavigate();
+  // Remove useNavigate and Visualize button (no longer needed)
   return (
     <div
       className="
@@ -86,17 +86,7 @@ const SummarySelector: React.FC<SummarySelectorProps> = ({
           </Button>
         </div>
       </div>
-      <div className="flex w-full sm:w-auto justify-center sm:justify-end mt-3 sm:mt-0">
-        <Button
-          variant="outline"
-          className="border-cosmic-gold text-cosmic-gold font-semibold px-5 whitespace-nowrap"
-          onClick={() => navigate("/visualization")}
-          size="sm"
-        >
-          <BarChartHorizontal className="w-4 mr-1" />
-          Visualize
-        </Button>
-      </div>
+      {/* Removed the bottom Visualize button */}
     </div>
   );
 };
