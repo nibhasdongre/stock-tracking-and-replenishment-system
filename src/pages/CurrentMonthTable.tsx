@@ -10,6 +10,8 @@ import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import AccessHeader from "@/components/AccessHeader";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useSessionRegion } from "@/hooks/useSessionRegion";
+import StockTable from "@/components/StockTable";
+import { useStockUpdate, StockItem } from "@/hooks/useStockUpdate";
 
 type StockItem = {
   id: number;
@@ -18,24 +20,35 @@ type StockItem = {
 };
 
 export default function CurrentMonthTable() {
-  const [data, setData] = useState<StockItem[]>([
+  // Intial inventory is static here, could be loaded based on region
+  const INITIAL_DATA: StockItem[] = [
     { id: 1, item: "Pens", qty: 45 },
     { id: 2, item: "Notebooks", qty: 28 },
     { id: 3, item: "Markers", qty: 10 }
-  ]);
-  const [updating, setUpdating] = useState(false);
-  const [stockRow, setStockRow] = useState<number | null>(null);
-  const [input1, setInput1] = useState("");
-  const [input2, setInput2] = useState("");
-  const navigate = useNavigate();
+  ];
+  const {
+    data,
+    updating,
+    stockRow,
+    input1,
+    input2,
+    selectedDate,
+    setStockRow,
+    setInput1,
+    setInput2,
+    setSelectedDate,
+    startUpdate,
+    cancelUpdate,
+    saveUpdate,
+    pickDate,
+  } = useStockUpdate({ initialData: INITIAL_DATA });
 
   const [l2Prompt, setL2Prompt] = useState(false);
   const [dateDialog, setDateDialog] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showInvalid, setShowInvalid] = useState(false);
 
   // Session access logic
   const { accessLevel, setLevel } = useSessionAccess();
-  const [showInvalid, setShowInvalid] = useState(false);
 
   // L2 or L3 required for update
   const canEdit = accessLevel === "L2" || accessLevel === "L3";
@@ -44,51 +57,6 @@ export default function CurrentMonthTable() {
 
   // Session region logic
   const { region } = useSessionRegion();
-
-  function startUpdate(idx: number) {
-    setStockRow(idx);
-    setUpdating(true);
-    setInput1("");
-    setInput2("");
-  }
-  function cancelUpdate() {
-    setStockRow(null);
-    setUpdating(false);
-    setInput1("");
-    setInput2("");
-    setSelectedDate(null);
-  }
-
-  function saveUpdate() {
-    if (stockRow === null || !selectedDate) return;
-    const num1 = Number(input1);
-    const num2 = Number(input2);
-    if (isNaN(num1) || isNaN(num2)) {
-      alert("Please enter valid numbers.");
-      return;
-    }
-    const updatedQty = num1 + num2;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const picked = format(selectedDate, "yyyy-MM-dd");
-    if (picked === today) {
-      setData(prev =>
-        prev.map((row, idx) =>
-          idx === stockRow ? { ...row, qty: updatedQty } : row
-        )
-      );
-      // TODO: Make API call here to save changes to the backend
-    } else {
-      const item = data[stockRow];
-      addLogRequest({
-        id: `${Date.now()}_${item.id}`,
-        description: `Backdate qty change for ${item.item}`,
-        change: `+${updatedQty - item.qty} to ${format(selectedDate, "yyyy-MM-dd")}`,
-        status: "pending",
-      });
-      alert("Your change request has been sent for review (it won't update the data now).");
-    }
-    cancelUpdate();
-  }
 
   function handleUpdateButton() {
     // Require L2 or L3 for update
@@ -153,76 +121,21 @@ export default function CurrentMonthTable() {
             Edit Items
           </Button>
         </div>
-        <table className="w-full max-w-xl bg-black/70 rounded shadow text-left border border-cosmic-blue animate-fade-in">
-          <thead>
-            <tr>
-              <th className="px-4 py-2">Stock Item</th>
-              <th className="px-4 py-2">Qty</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, idx) => (
-              <tr
-                key={row.id}
-                className={stockRow === idx && updating ? "bg-yellow-100" : ""}
-              >
-                <td className="px-4 py-2">{row.item}</td>
-                <td className="px-4 py-2">{row.qty}</td>
-                <td className="px-4 py-2">
-                  {updating && (stockRow === idx || stockRow === null) && selectedDate ? (
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        value={input1}
-                        onChange={e => setInput1(e.target.value)}
-                        placeholder="Num 1"
-                        className="w-16 px-2 py-1 rounded border"
-                      />
-                      <input
-                        type="number"
-                        value={input2}
-                        onChange={e => setInput2(e.target.value)}
-                        placeholder="Num 2"
-                        className="w-16 px-2 py-1 rounded border"
-                      />
-                      <Button
-                        variant="outline"
-                        onClick={cancelUpdate}
-                        className="ml-2"
-                      >
-                        Cancel
-                      </Button>
-                      {stockRow !== idx && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => setStockRow(idx)}
-                        >
-                          Update
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        if (selectedDate) {
-                          setStockRow(idx);
-                          setUpdating(true);
-                        } else {
-                          handleUpdateButton();
-                        }
-                      }}
-                      disabled={updating && stockRow !== idx}
-                    >
-                      Update
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Replace the table here with new StockTable component */}
+        <StockTable
+          data={data}
+          updating={updating}
+          stockRow={stockRow}
+          input1={input1}
+          input2={input2}
+          selectedDate={selectedDate}
+          startUpdate={startUpdate}
+          cancelUpdate={cancelUpdate}
+          saveUpdate={saveUpdate}
+          setInput1={setInput1}
+          setInput2={setInput2}
+          setStockRow={setStockRow}
+        />
       </div>
     </div>
   );
