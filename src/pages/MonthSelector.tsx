@@ -41,7 +41,7 @@ export default function MonthSelector() {
   }
 
   return (
-    <PasswordGate gateId="month" password="stars2024">
+    
       <div className="relative min-h-screen flex flex-col items-center justify-center px-3 overflow-hidden bg-background">
         <StarBackground />
         <div className="relative z-10 flex flex-col items-center bg-black/70 bg-blur-lg rounded-xl shadow-2xl px-6 py-10 backdrop-blur-md max-w-md w-full border border-cosmic-blue animate-fade-in">
@@ -124,6 +124,6 @@ export default function MonthSelector() {
           </div>
         </div>
       </div>
-    </PasswordGate>
+    
   );
 }
