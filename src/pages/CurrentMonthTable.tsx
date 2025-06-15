@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,11 @@ import { useSessionRegion } from "@/hooks/useSessionRegion";
 import StockTable from "@/components/StockTable";
 import { useStockUpdate, StockItem } from "@/hooks/useStockUpdate";
 
-type StockItem = {
-  id: number;
-  item: string;
-  qty: number;
-};
+// REMOVED: type StockItem = { id: number; item: string; qty: number; }
 
 export default function CurrentMonthTable() {
+  const navigate = useNavigate();
+
   // Intial inventory is static here, could be loaded based on region
   const INITIAL_DATA: StockItem[] = [
     { id: 1, item: "Pens", qty: 45 },
@@ -64,14 +63,12 @@ export default function CurrentMonthTable() {
       setShowInvalid(true);
       return;
     }
-    if (accessLevel==="L2" || accessLevel==="L3"){
-      setDateDialog(true);}
-      else{
-        setL2Prompt(true)
-      }
+    if (accessLevel === "L2" || accessLevel === "L3") {
+      setDateDialog(true);
+    } else {
+      setL2Prompt(true);
     }
-    
-  
+  }
 
   function handleL2Close(allowed: boolean) {
     setL2Prompt(false);
@@ -84,7 +81,7 @@ export default function CurrentMonthTable() {
     setDateDialog(false);
     if (date) {
       setSelectedDate(date);
-      setUpdating(true);
+      // setUpdating is not directly available; handled inside useStockUpdate when setSelectedDate is called
       setStockRow(null); // Allow user to choose a row after date selection
     }
   }
