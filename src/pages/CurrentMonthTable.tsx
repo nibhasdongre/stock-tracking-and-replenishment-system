@@ -7,6 +7,9 @@ import PasswordGateL2 from "@/components/PasswordGateL2";
 import DateSelectDialog from "@/components/DateSelectDialog";
 import { addLogRequest } from "@/utils/logRequests";
 import { format } from "date-fns";
+import InvalidRequestDialog from "@/components/InvalidRequestDialog";
+import AccessHeader from "@/components/AccessHeader";
+import { useSessionAccess } from "@/hooks/useSessionAccess";
 
 type StockItem = {
   id: number;
@@ -30,6 +33,12 @@ export default function CurrentMonthTable() {
   const [dateDialog, setDateDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  // Session access logic
+  const { accessLevel, setLevel } = useSessionAccess();
+  const [showInvalid, setShowInvalid] = useState(false);
+
+  // L2 or L3 required for update
+  const canEdit = accessLevel === "L2" || accessLevel === "L3";
   // Enable Save if update UI is showing for any row and date is picked
   const saveEnabled = updating && stockRow !== null && selectedDate !== null;
 
@@ -66,7 +75,6 @@ export default function CurrentMonthTable() {
       );
       // TODO: Make API call here to save changes to the backend
     } else {
-      // Log as request and do not change the data
       const item = data[stockRow];
       addLogRequest({
         id: `${Date.now()}_${item.id}`,
@@ -80,11 +88,18 @@ export default function CurrentMonthTable() {
   }
 
   function handleUpdateButton() {
+    // Require L2 or L3 for update
+    if (!canEdit) {
+      setShowInvalid(true);
+      return;
+    }
     setL2Prompt(true);
   }
+
   function handleL2Close(allowed: boolean) {
     setL2Prompt(false);
     if (allowed) {
+      setLevel("L2");
       setDateDialog(true); // after unlock, always ask for date
     }
   }
@@ -100,6 +115,8 @@ export default function CurrentMonthTable() {
   return (
     <div className="relative min-h-screen bg-background flex flex-col items-center pt-6 px-2 overflow-hidden">
       <StarBackground />
+      <AccessHeader />
+      <InvalidRequestDialog open={showInvalid} onOpenChange={setShowInvalid} />
       <PasswordGateL2 open={l2Prompt} onClose={handleL2Close} />
       <DateSelectDialog open={dateDialog} onClose={handleDateChosen} />
       <div className="relative z-10 w-full flex flex-col items-center">
@@ -118,7 +135,7 @@ export default function CurrentMonthTable() {
           >
             Save
           </Button>
-          <Button variant="default" onClick={() => navigate("/edit")}>
+          <Button variant="default" onClick={() => canEdit ? navigate("/edit") : setShowInvalid(true)}>
             Edit Items
           </Button>
         </div>
@@ -162,7 +179,6 @@ export default function CurrentMonthTable() {
                       >
                         Cancel
                       </Button>
-                      {/* Now allow clicking 'Update' on any row after selecting date */}
                       {stockRow !== idx && (
                         <Button
                           variant="ghost"
@@ -180,7 +196,6 @@ export default function CurrentMonthTable() {
                           setStockRow(idx);
                           setUpdating(true);
                         } else {
-                          // Prompt L2 and date dialog if not updating already
                           handleUpdateButton();
                         }
                       }}

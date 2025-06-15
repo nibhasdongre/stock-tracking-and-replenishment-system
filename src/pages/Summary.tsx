@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StarBackground from "@/components/StarBackground";
 import SummaryMatrix from "@/components/SummaryMatrix";
 import SummaryTable from "./summary/SummaryTable";
@@ -9,6 +9,10 @@ import MainLineChart from "./visualization/MainLineChart";
 import { trendDummy } from "./visualization/visualizationUtils";
 import { renderAndAdd, getTodayDisplay } from "./summary/pdfExportHelpers";
 import jsPDF from "jspdf";
+import AccessHeader from "@/components/AccessHeader";
+import InvalidRequestDialog from "@/components/InvalidRequestDialog";
+import { useSessionAccess } from "@/hooks/useSessionAccess";
+import { useNavigate } from "react-router-dom";
 
 export default function Summary() {
   const now = new Date();
@@ -161,67 +165,85 @@ export default function Summary() {
     }
   };
 
-  return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
-      <StarBackground />
-      <div className="relative z-10 bg-black/70 shadow rounded-xl px-4 py-8 max-w-3xl w-full animate-fade-in border border-cosmic-blue mx-3">
-        <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
-          Sales & Quantity Summary
-        </h2>
-        <SummaryActions
-          month={month} setMonth={setMonth}
-          year={year} setYear={setYear}
-          annualYear={annualYear} setAnnualYear={setAnnualYear}
-          minYear={minYear} maxYear={maxYear}
-          onMonthly={() => setVisibleReportType("monthly")}
-          onAnnual={() => setVisibleReportType("annual")}
-          exporting={exporting}
-          onDownload={handleDownloadPdf}
-          visibleReportType={visibleReportType}
-        />
-        <div ref={summaryMatrixRef}>
-          <SummaryMatrix {...{topQuantity, bottomQuantity, topSales, bottomSales}} />
-        </div>
-        {visibleReportType !== "none" && (
-          <div className="mt-8">
-            <SummaryTable
-              tableTitle={tableTitle}
-              tableData={tableData}
-              summaryTableRef={summaryTableRef}
-            />
-          </div>
-        )}
+  // Access control
+  const { accessLevel, setLevel } = useSessionAccess();
+  const [showInvalid, setShowInvalid] = React.useState(false);
+  const navigate = useNavigate();
 
-        {/* Visualization Export Offscreen Area */}
-        {exportAreaVisible && (
-          <div
-            style={{
-              position: 'fixed',
-              top: '-999px',
-              left: '-999px',
-              width: '1200px',
-              background: '#fff',
-              zIndex: 99999,
-              pointerEvents: 'none',
-              opacity: 1
-            }}
-          >
-            <div ref={pieRef} style={{padding: 24, background: '#fff'}} >
-              <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
-            </div>
-            <div ref={barRef} style={{padding: 24, background: '#fff'}} >
-              <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
-            </div>
-            <div ref={lineRef} style={{padding: 24, background: '#fff'}} >
-              <MainLineChart
-                products={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))}
-                mode="quantity"
-                trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
+  React.useEffect(() => {
+    if (accessLevel !== "L3") setShowInvalid(true);
+  }, [accessLevel]);
+
+  function handleInvalidClose(open: boolean) {
+    setShowInvalid(open);
+    if (!open) navigate("/");
+  }
+
+  return (
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-background overflow-hidden">
+      <StarBackground />
+      <AccessHeader />
+      <InvalidRequestDialog open={showInvalid} onOpenChange={handleInvalidClose} />
+      {!showInvalid && (
+        <div className="relative z-10 bg-black/70 shadow rounded-xl px-4 py-8 max-w-3xl w-full animate-fade-in border border-cosmic-blue mx-3">
+          <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-7 tracking-wider uppercase font-sans">
+            Sales & Quantity Summary
+          </h2>
+          <SummaryActions
+            month={month} setMonth={setMonth}
+            year={year} setYear={setYear}
+            annualYear={annualYear} setAnnualYear={setAnnualYear}
+            minYear={minYear} maxYear={maxYear}
+            onMonthly={() => setVisibleReportType("monthly")}
+            onAnnual={() => setVisibleReportType("annual")}
+            exporting={exporting}
+            onDownload={handleDownloadPdf}
+            visibleReportType={visibleReportType}
+          />
+          <div ref={summaryMatrixRef}>
+            <SummaryMatrix {...{topQuantity, bottomQuantity, topSales, bottomSales}} />
+          </div>
+          {visibleReportType !== "none" && (
+            <div className="mt-8">
+              <SummaryTable
+                tableTitle={tableTitle}
+                tableData={tableData}
+                summaryTableRef={summaryTableRef}
               />
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* Visualization Export Offscreen Area */}
+          {exportAreaVisible && (
+            <div
+              style={{
+                position: 'fixed',
+                top: '-999px',
+                left: '-999px',
+                width: '1200px',
+                background: '#fff',
+                zIndex: 99999,
+                pointerEvents: 'none',
+                opacity: 1
+              }}
+            >
+              <div ref={pieRef} style={{padding: 24, background: '#fff'}} >
+                <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
+              </div>
+              <div ref={barRef} style={{padding: 24, background: '#fff'}} >
+                <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
+              </div>
+              <div ref={lineRef} style={{padding: 24, background: '#fff'}} >
+                <MainLineChart
+                  products={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))}
+                  mode="quantity"
+                  trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

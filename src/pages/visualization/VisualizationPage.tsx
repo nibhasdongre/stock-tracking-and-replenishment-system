@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
@@ -15,6 +15,10 @@ import { categories, productList, chartsDummy, pieColors, trendDummy, getRandomI
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
 import { format } from "date-fns";
+import AccessHeader from "@/components/AccessHeader";
+import InvalidRequestDialog from "@/components/InvalidRequestDialog";
+import { useSessionAccess } from "@/hooks/useSessionAccess";
+import { useNavigate } from "react-router-dom";
 
 export default function VisualizationPage() {
   const [mode, setMode] = useState<"sales" | "quantity">("sales");
@@ -53,6 +57,21 @@ export default function VisualizationPage() {
 
   // Ref to visualize the WHOLE page for PDF
   const pageRef = useRef<HTMLDivElement>(null);
+
+  // Access control
+  const { accessLevel, setLevel } = useSessionAccess();
+  const [showInvalid, setShowInvalid] = useState(false);
+  const navigate = useNavigate();
+
+  // Block access if not L3
+  React.useEffect(() => {
+    if (accessLevel !== "L3") setShowInvalid(true);
+  }, [accessLevel]);
+
+  function handleInvalidClose(open: boolean) {
+    setShowInvalid(open);
+    if (!open) navigate("/");
+  }
 
   // --- Read the search params for month and year from Summary page, if present
   const location = useLocation();
@@ -207,158 +226,164 @@ export default function VisualizationPage() {
 
   return (
     <div ref={pageRef} className="min-h-screen py-10 bg-background flex flex-col items-center">
-      <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-1 uppercase font-sans">
-        {summaryTitle}
-      </h2>
-      <div className="text-center text-cosmic-gold text-lg mb-4 font-semibold">
-        {summaryMonth && summaryYear ? "Visualization for selected period" : ""}
-      </div>
-      <div className="flex gap-4 mb-7">
-        <Button
-          className={mode === "sales" ? "bg-cosmic-blue text-cosmic-gold" : ""}
-          onClick={() => setMode("sales")}
-        >
-          By Sales
-        </Button>
-        <Button
-          className={mode === "quantity" ? "bg-cosmic-blue text-cosmic-gold" : ""}
-          onClick={() => setMode("quantity")}
-        >
-          By Quantity
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setCustomViz(s => !s);
-            setSelectedProducts([]);
-            setStartDate("");
-            setEndDate("");
-          }}
-          className="border-cosmic-gold text-cosmic-gold"
-        >
-          Custom Visualization
-        </Button>
-        <Button
-          variant="outline"
-          className="border-cosmic-gold text-cosmic-gold whitespace-nowrap font-semibold"
-          size="sm"
-          onClick={handleDownloadPdf}
-          disabled={exporting}
-        >
-          {exporting ? "Exporting..." : "Download as PDF"}
-        </Button>
-      </div>
+      <AccessHeader />
+      <InvalidRequestDialog open={showInvalid} onOpenChange={handleInvalidClose} />
+      {!showInvalid && (
+        <>
+          <h2 className="text-center text-cosmic-blue text-2xl sm:text-3xl font-bold mb-1 uppercase font-sans">
+            {summaryTitle}
+          </h2>
+          <div className="text-center text-cosmic-gold text-lg mb-4 font-semibold">
+            {summaryMonth && summaryYear ? "Visualization for selected period" : ""}
+          </div>
+          <div className="flex gap-4 mb-7">
+            <Button
+              className={mode === "sales" ? "bg-cosmic-blue text-cosmic-gold" : ""}
+              onClick={() => setMode("sales")}
+            >
+              By Sales
+            </Button>
+            <Button
+              className={mode === "quantity" ? "bg-cosmic-blue text-cosmic-gold" : ""}
+              onClick={() => setMode("quantity")}
+            >
+              By Quantity
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCustomViz(s => !s);
+                setSelectedProducts([]);
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="border-cosmic-gold text-cosmic-gold"
+            >
+              Custom Visualization
+            </Button>
+            <Button
+              variant="outline"
+              className="border-cosmic-gold text-cosmic-gold whitespace-nowrap font-semibold"
+              size="sm"
+              onClick={handleDownloadPdf}
+              disabled={exporting}
+            >
+              {exporting ? "Exporting..." : "Download as PDF"}
+            </Button>
+          </div>
 
-      {/* Default Visualizations */}
-      <div className="flex flex-wrap gap-8 justify-center items-start mb-7 w-full max-w-5xl">
-        <div style={hiddenExportStyle}>
-          <div ref={summaryTableRef}>
-            <table className="w-full border text-slate-100 rounded-lg overflow-hidden text-base">
-              <thead>
-                <tr className="bg-cosmic-blue text-black">
-                  <th className="p-2">Product</th>
-                  <th className="p-2">Category</th>
-                  <th className="p-2">Quantity</th>
-                  <th className="p-2">Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {demoSummaryTableData.map((row, i) => (
-                  <tr key={i} className="bg-black/70 border-b last:border-0">
-                    <td className="p-2">{row.name}</td>
-                    <td className="p-2">{row.category}</td>
-                    <td className="p-2 text-center">{row.quantity}</td>
-                    <td className="p-2 text-center">{row.sales}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Default Visualizations */}
+          <div className="flex flex-wrap gap-8 justify-center items-start mb-7 w-full max-w-5xl">
+            <div style={hiddenExportStyle}>
+              <div ref={summaryTableRef}>
+                <table className="w-full border text-slate-100 rounded-lg overflow-hidden text-base">
+                  <thead>
+                    <tr className="bg-cosmic-blue text-black">
+                      <th className="p-2">Product</th>
+                      <th className="p-2">Category</th>
+                      <th className="p-2">Quantity</th>
+                      <th className="p-2">Sales</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {demoSummaryTableData.map((row, i) => (
+                      <tr key={i} className="bg-black/70 border-b last:border-0">
+                        <td className="p-2">{row.name}</td>
+                        <td className="p-2">{row.category}</td>
+                        <td className="p-2 text-center">{row.quantity}</td>
+                        <td className="p-2 text-center">{row.sales}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div ref={mainPieRef}>
+              <MainPieChart data={combined} mode={mode} />
+            </div>
+            <div ref={mainBarRef}>
+              <MainBarChart data={combined} mode={mode} />
+            </div>
+            <div ref={mainLineRef}>
+              <MainLineChart products={combined} mode={mode} trendData={trendDummy(combined.map(p => p.name))} />
+            </div>
           </div>
-        </div>
-        <div ref={mainPieRef}>
-          <MainPieChart data={combined} mode={mode} />
-        </div>
-        <div ref={mainBarRef}>
-          <MainBarChart data={combined} mode={mode} />
-        </div>
-        <div ref={mainLineRef}>
-          <MainLineChart products={combined} mode={mode} trendData={trendDummy(combined.map(p => p.name))} />
-        </div>
-      </div>
-      {/* Custom Viz */}
-      {customViz && (
-        <CustomVisualizationSection
-          mode={mode}
-          selectedProducts={selectedProducts}
-          setSelectedProducts={setSelectedProducts}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-          customPieRef={customPieRef}
-          customBarRef={customBarRef}
-          customLineRef={customLineRef}
-          customProductsTableRef={customProductsTableRef}
-        />
+          {/* Custom Viz */}
+          {customViz && (
+            <CustomVisualizationSection
+              mode={mode}
+              selectedProducts={selectedProducts}
+              setSelectedProducts={setSelectedProducts}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              customPieRef={customPieRef}
+              customBarRef={customBarRef}
+              customLineRef={customLineRef}
+              customProductsTableRef={customProductsTableRef}
+            />
+          )}
+          <div style={hiddenExportStyle}>
+            {/* Exportable matrix for PDF */}
+            <div ref={summaryMatrixRef}>
+              {/* Copy-paste the SummaryMatrix with hardcoded demo data as used in Summary */}
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                {/* Quantity column */}
+                <div className="flex flex-col gap-4">
+                  <div className="bg-slate-900 bg-opacity-70 border border-cosmic-blue rounded-xl p-4 shadow">
+                    <div className="font-bold text-cosmic-blue text-lg mb-2 text-center">Top 5 Products (Quantity)</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-200">
+                      {matrixData.topQuantity.map((item, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span className="truncate">{item.name}</span>
+                          <span className="font-semibold pl-3">{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <div className="bg-slate-900 bg-opacity-70 border border-cosmic-blue rounded-xl p-4 shadow">
+                    <div className="font-bold text-cosmic-blue text-lg mb-2 text-center">Bottom 5 Products (Quantity)</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-200">
+                      {matrixData.bottomQuantity.map((item, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span className="truncate">{item.name}</span>
+                          <span className="font-semibold pl-3">{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+                {/* Sales column */}
+                <div className="flex flex-col gap-4">
+                  <div className="bg-slate-900 bg-opacity-70 border border-cosmic-gold rounded-xl p-4 shadow">
+                    <div className="font-bold text-cosmic-gold text-lg mb-2 text-center">Top 5 Products (Sales)</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-200">
+                      {matrixData.topSales.map((item, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span className="truncate">{item.name}</span>
+                          <span className="font-semibold pl-3">{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <div className="bg-slate-900 bg-opacity-70 border border-cosmic-gold rounded-xl p-4 shadow">
+                    <div className="font-bold text-cosmic-gold text-lg mb-2 text-center">Bottom 5 Products (Sales)</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-200">
+                      {matrixData.bottomSales.map((item, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span className="truncate">{item.name}</span>
+                          <span className="font-semibold pl-3">{item.value}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
-      <div style={hiddenExportStyle}>
-        {/* Exportable matrix for PDF */}
-        <div ref={summaryMatrixRef}>
-          {/* Copy-paste the SummaryMatrix with hardcoded demo data as used in Summary */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            {/* Quantity column */}
-            <div className="flex flex-col gap-4">
-              <div className="bg-slate-900 bg-opacity-70 border border-cosmic-blue rounded-xl p-4 shadow">
-                <div className="font-bold text-cosmic-blue text-lg mb-2 text-center">Top 5 Products (Quantity)</div>
-                <ol className="list-decimal list-inside space-y-1 text-slate-200">
-                  {matrixData.topQuantity.map((item, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate">{item.name}</span>
-                      <span className="font-semibold pl-3">{item.value}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <div className="bg-slate-900 bg-opacity-70 border border-cosmic-blue rounded-xl p-4 shadow">
-                <div className="font-bold text-cosmic-blue text-lg mb-2 text-center">Bottom 5 Products (Quantity)</div>
-                <ol className="list-decimal list-inside space-y-1 text-slate-200">
-                  {matrixData.bottomQuantity.map((item, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate">{item.name}</span>
-                      <span className="font-semibold pl-3">{item.value}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-            {/* Sales column */}
-            <div className="flex flex-col gap-4">
-              <div className="bg-slate-900 bg-opacity-70 border border-cosmic-gold rounded-xl p-4 shadow">
-                <div className="font-bold text-cosmic-gold text-lg mb-2 text-center">Top 5 Products (Sales)</div>
-                <ol className="list-decimal list-inside space-y-1 text-slate-200">
-                  {matrixData.topSales.map((item, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate">{item.name}</span>
-                      <span className="font-semibold pl-3">{item.value}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-              <div className="bg-slate-900 bg-opacity-70 border border-cosmic-gold rounded-xl p-4 shadow">
-                <div className="font-bold text-cosmic-gold text-lg mb-2 text-center">Bottom 5 Products (Sales)</div>
-                <ol className="list-decimal list-inside space-y-1 text-slate-200">
-                  {matrixData.bottomSales.map((item, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate">{item.name}</span>
-                      <span className="font-semibold pl-3">{item.value}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
