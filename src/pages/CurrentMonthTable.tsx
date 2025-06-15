@@ -30,8 +30,8 @@ export default function CurrentMonthTable() {
   const [dateDialog, setDateDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // Enable Save if update UI is showing for any row
-  const saveEnabled = updating && stockRow !== null;
+  // Enable Save if update UI is showing for any row and date is picked
+  const saveEnabled = updating && stockRow !== null && selectedDate !== null;
 
   function startUpdate(idx: number) {
     setStockRow(idx);
@@ -56,18 +56,15 @@ export default function CurrentMonthTable() {
       return;
     }
     const updatedQty = num1 + num2;
-    // Check if for today or past
     const today = format(new Date(), "yyyy-MM-dd");
     const picked = format(selectedDate, "yyyy-MM-dd");
     if (picked === today) {
-      // Update instantly (real, as before)
       setData(prev =>
         prev.map((row, idx) =>
           idx === stockRow ? { ...row, qty: updatedQty } : row
         )
       );
       // TODO: Make API call here to save changes to the backend
-      // await fetch("/api/update-stock", { ... })
     } else {
       // Log as request and do not change the data
       const item = data[stockRow];
@@ -77,7 +74,7 @@ export default function CurrentMonthTable() {
         change: `+${updatedQty - item.qty} to ${format(selectedDate, "yyyy-MM-dd")}`,
         status: "pending",
       });
-      alert("Your change request has been sent for review.");
+      alert("Your change request has been sent for review (it won't update the data now).");
     }
     cancelUpdate();
   }
@@ -88,8 +85,7 @@ export default function CurrentMonthTable() {
   function handleL2Close(allowed: boolean) {
     setL2Prompt(false);
     if (allowed) {
-      // Open date dialog next
-      setDateDialog(true);
+      setDateDialog(true); // after unlock, always ask for date
     }
   }
   function handleDateChosen(date: Date | null) {
@@ -97,6 +93,7 @@ export default function CurrentMonthTable() {
     if (date) {
       setSelectedDate(date);
       setUpdating(true);
+      setStockRow(null); // Allow user to choose a row after date selection
     }
   }
 
@@ -142,7 +139,7 @@ export default function CurrentMonthTable() {
                 <td className="px-4 py-2">{row.item}</td>
                 <td className="px-4 py-2">{row.qty}</td>
                 <td className="px-4 py-2">
-                  {updating && stockRow === idx ? (
+                  {updating && (stockRow === idx || stockRow === null) && selectedDate ? (
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -165,12 +162,29 @@ export default function CurrentMonthTable() {
                       >
                         Cancel
                       </Button>
+                      {/* Now allow clicking 'Update' on any row after selecting date */}
+                      {stockRow !== idx && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => setStockRow(idx)}
+                        >
+                          Update
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <Button
                       variant="ghost"
-                      onClick={() => startUpdate(idx)}
-                      disabled={updating}
+                      onClick={() => {
+                        if (selectedDate) {
+                          setStockRow(idx);
+                          setUpdating(true);
+                        } else {
+                          // Prompt L2 and date dialog if not updating already
+                          handleUpdateButton();
+                        }
+                      }}
+                      disabled={updating && stockRow !== idx}
                     >
                       Update
                     </Button>
