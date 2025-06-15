@@ -12,7 +12,8 @@ import jsPDF from "jspdf";
 import AccessHeader from "@/components/AccessHeader";
 import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { format } from "date-fns";
 
 export default function Summary() {
   const now = new Date();
@@ -24,14 +25,28 @@ export default function Summary() {
   const maxYear = now.getFullYear();
   const [exporting, setExporting] = React.useState(false);
 
-  // Refs for export elements
-  const pieRef = React.useRef<HTMLDivElement>(null);
-  const barRef = React.useRef<HTMLDivElement>(null);
-  const lineRef = React.useRef<HTMLDivElement>(null);
-  const summaryMatrixRef = React.useRef<HTMLDivElement>(null);
-  const summaryTableRef = React.useRef<HTMLDivElement>(null);
+  // New: Use query params to extract month/year as selected on MonthSelector
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const selectedMonth = queryParams.get("month");
+  const selectedYear = queryParams.get("year");
 
-  // Dummy data for demo; replace with real data source in production
+  // If month/year was passed from Month page, prefer that for PDF title
+  let pdfMonth = month;
+  let pdfYear = year;
+  if (selectedMonth && /^(\d{1,2})$|^(\d{2})$/.test(selectedMonth)) {
+    pdfMonth = selectedMonth.padStart(2, "0");
+  }
+  if (selectedYear && /^\d{4}$/.test(selectedYear)) {
+    pdfYear = selectedYear;
+  }
+  // Fallback to annual report selection if visible
+  if (visibleReportType === "annual") {
+    pdfMonth = "";
+    pdfYear = annualYear;
+  }
+
+  // Dummy data (same as before)
   const topQuantity = [
     { name: "Product Alpha", value: 220 },
     { name: "Product Beta", value: 170 },
@@ -82,79 +97,205 @@ export default function Summary() {
     return date.toLocaleString('default', { month: 'long' });
   };
 
+  // Compose PDF title and subtitle
+  let pdfTitle = "Sales & Quantity Summary";
+  let pdfSubTitle = "";
+  if (pdfMonth && pdfYear) {
+    pdfTitle = `${getMonthName(pdfMonth)} ${pdfYear} - Sales & Quantity Summary`;
+    pdfSubTitle = `Month/Year: ${getMonthName(pdfMonth)} ${pdfYear}`;
+  } else if (pdfYear) {
+    pdfTitle = `${pdfYear} - Sales & Quantity Summary`;
+    pdfSubTitle = `Year: ${pdfYear}`;
+  } else {
+    // should never get here but fallback
+    pdfTitle = "Sales & Quantity Summary";
+    pdfSubTitle = getTodayDisplay();
+  }
+
+  // Prepare table data
   const normalizeTableData = (arr: Array<{ name: string; value?: number; quantity?: number; sales: number }>) =>
     arr.map(item => ({
       name: item.name, quantity: item.quantity ?? item.value ?? 0, sales: item.sales ?? 0,
     }));
 
-  let tableTitle = "";
-  let tableData: { name: string; quantity: number; sales: number }[] = [];
-  let subTitle = "";
+  let summaryTableData: { name: string; quantity: number; sales: number }[] = [];
   if (visibleReportType === "monthly") {
-    tableTitle = `Sales & Quantity Summary - ${getMonthName(month)} ${year}`;
-    tableData = normalizeTableData(dummyMonthlyReport);
-    subTitle = `Month/Year: ${getMonthName(month)} ${year}`;
+    summaryTableData = normalizeTableData(dummyMonthlyReport);
   } else if (visibleReportType === "annual") {
-    tableTitle = `Sales & Quantity Summary - ${annualYear}`;
-    tableData = normalizeTableData(dummyAnnualReport);
-    subTitle = `Year: ${annualYear}`;
+    summaryTableData = normalizeTableData(dummyAnnualReport);
   }
+
+  // Hidden refs for export
+  const summaryMatrixRef = React.useRef<HTMLDivElement>(null);
+  const summaryTableRef = React.useRef<HTMLDivElement>(null);
+
+  // Add extra refs for visualizations (by sales/by quantity, all chart types)
+  const pieQuantityRef = React.useRef<HTMLDivElement>(null);
+  const pieSalesRef = React.useRef<HTMLDivElement>(null);
+  const barQuantityRef = React.useRef<HTMLDivElement>(null);
+  const barSalesRef = React.useRef<HTMLDivElement>(null);
+  const lineQuantityRef = React.useRef<HTMLDivElement>(null);
+  const lineSalesRef = React.useRef<HTMLDivElement>(null);
 
   // Helper for offscreen export containers
   const [exportAreaVisible, setExportAreaVisible] = React.useState(false);
+
+  // Compact tables for Top & Bottom 5, as required by request
+  const CompactTopBottomTable = React.forwardRef(function CompactTopBottomTable(_, ref: React.Ref<HTMLDivElement>) {
+    return (
+      <div ref={ref} className="p-3">
+        <div className="flex flex-col md:flex-row gap-4 justify-center">
+          <div>
+            <div className="text-cosmic-blue font-semibold text-base text-center mb-1">Top 5 (Quantity)</div>
+            <table className="w-full border text-xs bg-white text-black rounded mb-2">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Product</th>
+                  <th className="border px-2 py-1">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topQuantity.map(p => (
+                  <tr key={p.name}>
+                    <td className="border px-2 py-1">{p.name}</td>
+                    <td className="border px-2 py-1 text-center">{p.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="text-cosmic-blue font-semibold text-base text-center mb-1 mt-3">Bottom 5 (Quantity)</div>
+            <table className="w-full border text-xs bg-white text-black rounded">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Product</th>
+                  <th className="border px-2 py-1">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bottomQuantity.map(p => (
+                  <tr key={p.name}>
+                    <td className="border px-2 py-1">{p.name}</td>
+                    <td className="border px-2 py-1 text-center">{p.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div className="text-cosmic-gold font-semibold text-base text-center mb-1">Top 5 (Sales)</div>
+            <table className="w-full border text-xs bg-white text-black rounded mb-2">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Product</th>
+                  <th className="border px-2 py-1">Sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topSales.map(p => (
+                  <tr key={p.name}>
+                    <td className="border px-2 py-1">{p.name}</td>
+                    <td className="border px-2 py-1 text-center">{p.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="text-cosmic-gold font-semibold text-base text-center mb-1 mt-3">Bottom 5 (Sales)</div>
+            <table className="w-full border text-xs bg-white text-black rounded">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Product</th>
+                  <th className="border px-2 py-1">Sales</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bottomSales.map(p => (
+                  <tr key={p.name}>
+                    <td className="border px-2 py-1">{p.name}</td>
+                    <td className="border px-2 py-1 text-center">{p.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  });
 
   // PDF export
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
     setExporting(true);
-    setExportAreaVisible(true); // Make chart refs visible for canvas capture!
-    await new Promise(r => setTimeout(r, 100)); // Allow hidden DOM to render
+    setExportAreaVisible(true); // Make refs visible for canvas capture!
+    await new Promise(r => setTimeout(r, 170)); // Allow hidden DOM to render
 
     try {
       const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
+      // const pageHeight = doc.internal.pageSize.getHeight();
       let y = 40;
 
-      // Title section
+      // Title
       doc.setFontSize(18);
       doc.setTextColor("#1566B8");
-      doc.text(tableTitle, pageWidth / 2, y, { align: "center" });
-
+      doc.text(pdfTitle, pageWidth / 2, y, { align: "center" });
       y += 26;
       doc.setFontSize(11);
       doc.setTextColor("#222");
       doc.text(getTodayDisplay(), pageWidth / 2, y, { align: "center" });
       y += 18;
       doc.setFontSize(13);
-      doc.text(subTitle, pageWidth / 2, y, { align: "center" });
+      doc.text(pdfSubTitle, pageWidth / 2, y, { align: "center" });
       y += 24;
 
-      // Matrix (Top & Bottom 5s)
+      // Compact Top/Bottom 5 tables (quantity & sales)
       if (summaryMatrixRef.current) {
-        y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products", pageWidth-80, 220, y, {center:true});
+        y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products (Table)", pageWidth-80, 220, y, {center:true});
       }
-      // Summary Table
+
+      // Summary Table (full size, uncropped)
       if (summaryTableRef.current) {
         y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
       }
-      // Visualizations (Pie, Bar, Line)
-      if (pieRef.current) {
+
+      // New: Add visualizations for both "By Sales" and "By Quantity" with headings, one per page as needed
+      // Pie (Quantity)
+      if (pieQuantityRef.current) {
         doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, pieRef.current, "Pie: Product Categories (Top 5 & Bottom 5)", 400, 230, vizY, {center: true});
+        vizY = await renderAndAdd(doc, pieQuantityRef.current, "Pie Chart: By Quantity", 460, 270, vizY, {center: true});
       }
-      if (barRef.current) {
+      // Pie (Sales)
+      if (pieSalesRef.current) {
         doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, barRef.current, "Histogram: Quantity per Product (Top 5 & Bottom 5)", 400, 230, vizY, {center: true});
+        vizY = await renderAndAdd(doc, pieSalesRef.current, "Pie Chart: By Sales", 460, 270, vizY, {center: true});
       }
-      if (lineRef.current) {
+      // Bar (Quantity)
+      if (barQuantityRef.current) {
         doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, lineRef.current, "Line: Annual Trend per Product (Top 5 & Bottom 5)", 670, 280, vizY, {center: true});
+        vizY = await renderAndAdd(doc, barQuantityRef.current, "Bar Chart: By Quantity", 460, 270, vizY, {center: true});
+      }
+      // Bar (Sales)
+      if (barSalesRef.current) {
+        doc.addPage(); let vizY = 60;
+        vizY = await renderAndAdd(doc, barSalesRef.current, "Bar Chart: By Sales", 460, 270, vizY, {center: true});
+      }
+      // Line (Quantity)
+      if (lineQuantityRef.current) {
+        doc.addPage(); let vizY = 60;
+        vizY = await renderAndAdd(doc, lineQuantityRef.current, "Line Chart: By Quantity", 670, 285, vizY, {center: true});
+      }
+      // Line (Sales)
+      if (lineSalesRef.current) {
+        doc.addPage(); let vizY = 60;
+        vizY = await renderAndAdd(doc, lineSalesRef.current, "Line Chart: By Sales", 670, 285, vizY, {center: true});
       }
 
       doc.save(
         visibleReportType === "monthly"
-          ? `Summary_${month}-${year}.pdf`
-          : `Summary_${annualYear}.pdf`
+          ? `Summary_${pdfMonth}-${pdfYear}.pdf`
+          : `Summary_${pdfYear}.pdf`
       );
     } catch (e) {
       console.error("PDF Export error:", e);
@@ -201,43 +342,76 @@ export default function Summary() {
             visibleReportType={visibleReportType}
           />
           <div ref={summaryMatrixRef}>
-            <SummaryMatrix {...{topQuantity, bottomQuantity, topSales, bottomSales}} />
+            <CompactTopBottomTable />
           </div>
           {visibleReportType !== "none" && (
-            <div className="mt-8">
+            <div className="mt-8" ref={summaryTableRef}>
               <SummaryTable
-                tableTitle={tableTitle}
-                tableData={tableData}
-                summaryTableRef={summaryTableRef}
+                tableTitle={
+                  visibleReportType === "monthly"
+                    ? `Sales & Quantity Summary - ${getMonthName(month)} ${year}`
+                    : `Sales & Quantity Summary - ${annualYear}`
+                }
+                tableData={summaryTableData}
               />
             </div>
           )}
 
-          {/* Visualization Export Offscreen Area */}
+          {/* Hidden Export Offscreen Area for PDF */}
           {exportAreaVisible && (
             <div
               style={{
                 position: 'fixed',
                 top: '-999px',
                 left: '-999px',
-                width: '1200px',
+                width: '1400px',
                 background: '#fff',
                 zIndex: 99999,
                 pointerEvents: 'none',
                 opacity: 1
               }}
             >
-              <div ref={pieRef} style={{padding: 24, background: '#fff'}} >
+              {/* Top/Bottom 5 compact tables (used for PDF rendering) */}
+              <div ref={summaryMatrixRef}>
+                <CompactTopBottomTable />
+              </div>
+              {/* Summary Table (in larger area to avoid cropping) */}
+              <div ref={summaryTableRef}>
+                <SummaryTable
+                  tableTitle={
+                    visibleReportType === "monthly"
+                      ? `Sales & Quantity Summary - ${getMonthName(month)} ${year}`
+                      : `Sales & Quantity Summary - ${annualYear}`
+                  }
+                  tableData={summaryTableData}
+                />
+              </div>
+              {/* Visualizations - By Quantity */}
+              <div ref={pieQuantityRef} style={{padding: 24, background: "#fff"}}>
                 <MainPieChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
               </div>
-              <div ref={barRef} style={{padding: 24, background: '#fff'}} >
+              <div ref={barQuantityRef} style={{padding: 24, background: "#fff"}}>
                 <MainBarChart data={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))} mode="quantity" />
               </div>
-              <div ref={lineRef} style={{padding: 24, background: '#fff'}} >
+              <div ref={lineQuantityRef} style={{padding: 24, background: "#fff"}}>
                 <MainLineChart
                   products={[...topQuantity, ...bottomQuantity].map(item => ({name: item.name, quantity: item.value, sales: 0, category: ""}))}
                   mode="quantity"
                   trendData={trendDummy([...topQuantity, ...bottomQuantity].map(p => p.name))}
+                />
+              </div>
+              {/* Visualizations - By Sales */}
+              <div ref={pieSalesRef} style={{padding: 24, background: "#fff"}}>
+                <MainPieChart data={[...topSales, ...bottomSales].map(item => ({name: item.name, sales: item.value, quantity: 0, category: ""}))} mode="sales" />
+              </div>
+              <div ref={barSalesRef} style={{padding: 24, background: "#fff"}}>
+                <MainBarChart data={[...topSales, ...bottomSales].map(item => ({name: item.name, sales: item.value, quantity: 0, category: ""}))} mode="sales" />
+              </div>
+              <div ref={lineSalesRef} style={{padding: 24, background: "#fff"}}>
+                <MainLineChart
+                  products={[...topSales, ...bottomSales].map(item => ({name: item.name, sales: item.value, quantity: 0, category: ""}))}
+                  mode="sales"
+                  trendData={trendDummy([...topSales, ...bottomSales].map(p => p.name))}
                 />
               </div>
             </div>
