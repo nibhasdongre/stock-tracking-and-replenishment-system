@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import StarBackground from "@/components/StarBackground";
+import PasswordGateL2 from "@/components/PasswordGateL2";
 
 type StockItem = {
   id: number;
@@ -21,6 +22,7 @@ export default function CurrentMonthTable() {
   const [input1, setInput1] = useState("");
   const [input2, setInput2] = useState("");
   const navigate = useNavigate();
+  const [l2Prompt, setL2Prompt] = useState(false);
 
   // Enable Save if update UI is showing for any row
   const saveEnabled = updating && stockRow !== null;
@@ -57,14 +59,26 @@ export default function CurrentMonthTable() {
     cancelUpdate();
   }
 
+  function handleUpdateButton() {
+    setL2Prompt(true);
+  }
+
+  function handleL2Close(allowed: boolean) {
+    setL2Prompt(false);
+    if (allowed) {
+      setUpdating(true);
+    }
+  }
+
   return (
     <div className="relative min-h-screen bg-background flex flex-col items-center pt-6 px-2 overflow-hidden">
       <StarBackground />
+      <PasswordGateL2 open={l2Prompt} onClose={handleL2Close} />
       <div className="relative z-10 w-full flex flex-col items-center">
         <div className="flex gap-3 mb-6">
           <Button
             variant="outline"
-            onClick={() => setUpdating(false)}
+            onClick={handleUpdateButton}
             disabled={updating}
           >
             Update Stock
