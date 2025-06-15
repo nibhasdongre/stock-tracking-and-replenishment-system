@@ -1,8 +1,12 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import StarBackground from "@/components/StarBackground";
 import PasswordGateL2 from "@/components/PasswordGateL2";
+import DateSelectDialog from "@/components/DateSelectDialog";
+import { addLogRequest } from "@/utils/logRequests";
+import { format } from "date-fns";
 
 type StockItem = {
   id: number;
@@ -11,7 +15,6 @@ type StockItem = {
 };
 
 export default function CurrentMonthTable() {
-  // Initial stock data (simulate loaded from backend)
   const [data, setData] = useState<StockItem[]>([
     { id: 1, item: "Pens", qty: 45 },
     { id: 2, item: "Notebooks", qty: 28 },
@@ -22,7 +25,10 @@ export default function CurrentMonthTable() {
   const [input1, setInput1] = useState("");
   const [input2, setInput2] = useState("");
   const navigate = useNavigate();
+
   const [l2Prompt, setL2Prompt] = useState(false);
+  const [dateDialog, setDateDialog] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Enable Save if update UI is showing for any row
   const saveEnabled = updating && stockRow !== null;
@@ -38,10 +44,11 @@ export default function CurrentMonthTable() {
     setUpdating(false);
     setInput1("");
     setInput2("");
+    setSelectedDate(null);
   }
+
   function saveUpdate() {
-    if (stockRow === null) return;
-    // For this example: we'll just sum the two numbers entered as new qty
+    if (stockRow === null || !selectedDate) return;
     const num1 = Number(input1);
     const num2 = Number(input2);
     if (isNaN(num1) || isNaN(num2)) {
@@ -49,23 +56,46 @@ export default function CurrentMonthTable() {
       return;
     }
     const updatedQty = num1 + num2;
-    setData(prev =>
-      prev.map((row, idx) =>
-        idx === stockRow ? { ...row, qty: updatedQty } : row
-      )
-    );
-    // TODO: Make API call here to save changes to the backend
-    // await fetch("/api/update-stock", { ... })
+    // Check if for today or past
+    const today = format(new Date(), "yyyy-MM-dd");
+    const picked = format(selectedDate, "yyyy-MM-dd");
+    if (picked === today) {
+      // Update instantly (real, as before)
+      setData(prev =>
+        prev.map((row, idx) =>
+          idx === stockRow ? { ...row, qty: updatedQty } : row
+        )
+      );
+      // TODO: Make API call here to save changes to the backend
+      // await fetch("/api/update-stock", { ... })
+    } else {
+      // Log as request and do not change the data
+      const item = data[stockRow];
+      addLogRequest({
+        id: `${Date.now()}_${item.id}`,
+        description: `Backdate qty change for ${item.item}`,
+        change: `+${updatedQty - item.qty} to ${format(selectedDate, "yyyy-MM-dd")}`,
+        status: "pending",
+      });
+      alert("Your change request has been sent for review.");
+    }
     cancelUpdate();
   }
 
   function handleUpdateButton() {
     setL2Prompt(true);
   }
-
   function handleL2Close(allowed: boolean) {
     setL2Prompt(false);
     if (allowed) {
+      // Open date dialog next
+      setDateDialog(true);
+    }
+  }
+  function handleDateChosen(date: Date | null) {
+    setDateDialog(false);
+    if (date) {
+      setSelectedDate(date);
       setUpdating(true);
     }
   }
@@ -74,6 +104,7 @@ export default function CurrentMonthTable() {
     <div className="relative min-h-screen bg-background flex flex-col items-center pt-6 px-2 overflow-hidden">
       <StarBackground />
       <PasswordGateL2 open={l2Prompt} onClose={handleL2Close} />
+      <DateSelectDialog open={dateDialog} onClose={handleDateChosen} />
       <div className="relative z-10 w-full flex flex-col items-center">
         <div className="flex gap-3 mb-6">
           <Button

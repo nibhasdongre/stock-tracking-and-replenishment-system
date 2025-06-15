@@ -1,13 +1,12 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import PasswordGate from "@/components/PasswordGate";
 import StarBackground from "@/components/StarBackground";
 import { Button } from "@/components/ui/button";
 import LogRequestsDrawer from "@/components/LogRequestsDrawer";
 import ItemFormDialog from "@/components/ItemFormDialog";
+import { getLogRequests, setLogRequests, LogRequest } from "@/utils/logRequests";
 
-/**
- * Each item has 4 fields: item, qty, category, minStock
- */
 type StockItem = {
   id: number;
   item: string;
@@ -15,27 +14,26 @@ type StockItem = {
   category: string;
   minStock: number;
 };
-// Fake initial data for demo
+
 const initialData: StockItem[] = [
   { id: 1, item: "Pens", qty: 45, category: "Stationery", minStock: 20 },
   { id: 2, item: "Notebooks", qty: 28, category: "Stationery", minStock: 10 },
   { id: 3, item: "Markers", qty: 10, category: "Stationery", minStock: 5 }
 ];
-type LogRequest = {
-  id: string;
-  description: string;
-  change: string;
-  status: "pending" | "approved" | "rejected";
-};
 export default function EditItems() {
   const [data, setData] = useState<StockItem[]>(initialData);
   const [selected, setSelected] = useState<number[]>([]);
   const [logDrawer, setLogDrawer] = useState(false);
-  const [logs, setLogs] = useState<LogRequest[]>([
-    // Sample
-    { id: "r1", description: "Backdate qty change for Notebooks", change: "+5 to 2024-06-10", status: "pending" },
-  ]);
+  const [logs, setLogs] = useState<LogRequest[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+
+  useEffect(() => {
+    // Load logs from localStorage
+    setLogs(getLogRequests());
+  }, []);
+  useEffect(() => {
+    setLogRequests(logs);
+  }, [logs]);
 
   function handleAddItem(item: { item: string; qty: number; category: string; minStock: number }) {
     setData(prev => [
@@ -55,13 +53,11 @@ export default function EditItems() {
   function handleApproveLog(id: string) {
     const req = logs.find(l => l.id === id);
     if (!req) return;
-    // For demo, just mark as approved and reflect as a visual update
     setLogs(prev => prev.map(l => l.id === id ? { ...l, status: "approved" } : l));
     // TODO: Real implementation would update data accordingly
   }
   function handleRejectLog(id: string) {
     setLogs(prev => prev.map(l => l.id === id ? { ...l, status: "rejected" } : l));
-    // Could optionally remove if not needed after reject
   }
 
   function handleSelect(id: number) {
@@ -69,8 +65,6 @@ export default function EditItems() {
   }
 
   function handleSave() {
-    // TODO: Here you would batch-save all pending changes to DB
-    // For now, we could show a toast or similar
     alert("All changes saved to database!");
   }
 
