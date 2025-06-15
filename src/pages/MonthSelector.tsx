@@ -8,6 +8,7 @@ import { Rocket, Star } from "lucide-react";
 import PasswordGate from "@/components/PasswordGate";
 import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
+import { useSessionRegion } from "@/hooks/useSessionRegion";
 
 export default function MonthSelector() {
   const now = new Date();
@@ -18,6 +19,7 @@ export default function MonthSelector() {
   const [invalidDialogOpen, setInvalidDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { accessLevel } = useSessionAccess();
+  const { region } = useSessionRegion();
 
   // Allowed range for year
   const minYear = 2010;
@@ -54,6 +56,10 @@ export default function MonthSelector() {
           </span>
           <div className="uppercase mb-4 tracking-widest text-cosmic-gold font-semibold text-sm opacity-85">
             <span>STARS</span>
+          </div>
+          <div className="mb-1 flex gap-2 items-center text-cosmic-blue text-base font-semibold text-center justify-center">
+            <span>Branch:</span>
+            <span className="bg-cosmic-gold px-2 py-1 rounded font-semibold text-black">{region}</span>
           </div>
           <div className="mb-3 mt-2 text-cosmic-blue text-lg font-light text-center">
             Please select a month and year <br/>

@@ -3,15 +3,20 @@ import StarBackground from "@/components/StarBackground";
 import AccessLoginForm from "@/components/AccessLoginForm";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useNavigate } from "react-router-dom";
+import { useSessionRegion } from "@/hooks/useSessionRegion";
 
 export default function Home() {
   const { setLevel } = useSessionAccess();
+  const { setRegion } = useSessionRegion();
   const navigate = useNavigate();
 
   function handleLogin(accessLevel: "L1" | "L2" | "L3") {
     setLevel(accessLevel);
     navigate("/month");
   }
+
+  // On logout, clear region and access
+  // (No header here, so region clear is handled on Logout in AccessHeader)
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">

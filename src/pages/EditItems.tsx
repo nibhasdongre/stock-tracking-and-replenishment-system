@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import PasswordGate from "@/components/PasswordGate";
 import StarBackground from "@/components/StarBackground";
@@ -10,6 +9,7 @@ import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import AccessHeader from "@/components/AccessHeader";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useNavigate } from "react-router-dom";
+import { useSessionRegion } from "@/hooks/useSessionRegion";
 
 type StockItem = {
   id: number;
@@ -35,6 +35,7 @@ export default function EditItems() {
   const { accessLevel, setLevel } = useSessionAccess();
   const [showInvalid, setShowInvalid] = useState(false);
   const navigate = useNavigate();
+  const { region } = useSessionRegion();
 
   // Only allow L3 or above
   useEffect(() => {
@@ -97,6 +98,11 @@ export default function EditItems() {
     <>
       <StarBackground />
       <AccessHeader />
+      <div className="w-full flex flex-row items-center justify-center mb-2 mt-2">
+        <div className="bg-cosmic-gold py-1 px-3 rounded text-black font-semibold text-sm shadow border border-cosmic-blue">
+          Branch: {region}
+        </div>
+      </div>
       <InvalidRequestDialog open={showInvalid} onOpenChange={handleInvalidClose} />
       {accessLevel === "L3" && (
         <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">

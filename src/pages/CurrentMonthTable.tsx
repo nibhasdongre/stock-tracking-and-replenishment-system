@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { format } from "date-fns";
 import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import AccessHeader from "@/components/AccessHeader";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
+import { useSessionRegion } from "@/hooks/useSessionRegion";
 
 type StockItem = {
   id: number;
@@ -41,6 +41,9 @@ export default function CurrentMonthTable() {
   const canEdit = accessLevel === "L2" || accessLevel === "L3";
   // Enable Save if update UI is showing for any row and date is picked
   const saveEnabled = updating && stockRow !== null && selectedDate !== null;
+
+  // Session region logic
+  const { region } = useSessionRegion();
 
   function startUpdate(idx: number) {
     setStockRow(idx);
@@ -122,6 +125,11 @@ export default function CurrentMonthTable() {
     <div className="relative min-h-screen bg-background flex flex-col items-center pt-6 px-2 overflow-hidden">
       <StarBackground />
       <AccessHeader />
+      <div className="w-full flex flex-row items-center justify-center mb-2 mt-2">
+        <div className="bg-cosmic-gold py-1 px-3 rounded text-black font-semibold text-sm shadow border border-cosmic-blue">
+          Branch: {region}
+        </div>
+      </div>
       <InvalidRequestDialog open={showInvalid} onOpenChange={setShowInvalid} />
       <PasswordGateL2 open={l2Prompt} onClose={handleL2Close} />
       <DateSelectDialog open={dateDialog} onClose={handleDateChosen} />
