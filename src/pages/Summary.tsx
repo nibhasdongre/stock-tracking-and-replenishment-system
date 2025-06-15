@@ -15,6 +15,8 @@ import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import autoTable from "jspdf-autotable";
+import { useSummaryPdfExport } from "./summary/hooks/useSummaryPdfExport";
+import CompactTopBottomTable from "./summary/components/CompactTopBottomTable";
 
 export default function Summary() {
   const now = new Date();
@@ -24,7 +26,6 @@ export default function Summary() {
   const [visibleReportType, setVisibleReportType] = useState<"none" | "monthly" | "annual">("none");
   const minYear = 2010;
   const maxYear = now.getFullYear();
-  const [exporting, setExporting] = React.useState(false);
 
   // New: Use query params to extract month/year as selected on MonthSelector
   const location = useLocation();
@@ -141,217 +142,24 @@ export default function Summary() {
   // Helper for offscreen export containers
   const [exportAreaVisible, setExportAreaVisible] = React.useState(false);
 
-  // Compact tables for Top & Bottom 5, as required by request
-  const CompactTopBottomTable = React.forwardRef(function CompactTopBottomTable(_, ref: React.Ref<HTMLDivElement>) {
-    return (
-      <div ref={ref} className="p-3">
-        <div className="flex flex-col md:flex-row gap-4 justify-center">
-          <div>
-            <div className="text-cosmic-blue font-semibold text-base text-center mb-1">Top 5 (Quantity)</div>
-            <table className="w-full border text-xs bg-white text-black rounded mb-2">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1">Product</th>
-                  <th className="border px-2 py-1">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topQuantity.map(p => (
-                  <tr key={p.name}>
-                    <td className="border px-2 py-1">{p.name}</td>
-                    <td className="border px-2 py-1 text-center">{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+  // --- removed old CompactTopBottomTable and handleDownloadPdf from here ---
+  const { exporting, setExporting, handleDownloadPdf } = useSummaryPdfExport();
 
-            <div className="text-cosmic-blue font-semibold text-base text-center mb-1 mt-3">Bottom 5 (Quantity)</div>
-            <table className="w-full border text-xs bg-white text-black rounded">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1">Product</th>
-                  <th className="border px-2 py-1">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bottomQuantity.map(p => (
-                  <tr key={p.name}>
-                    <td className="border px-2 py-1">{p.name}</td>
-                    <td className="border px-2 py-1 text-center">{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div>
-            <div className="text-cosmic-gold font-semibold text-base text-center mb-1">Top 5 (Sales)</div>
-            <table className="w-full border text-xs bg-white text-black rounded mb-2">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1">Product</th>
-                  <th className="border px-2 py-1">Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topSales.map(p => (
-                  <tr key={p.name}>
-                    <td className="border px-2 py-1">{p.name}</td>
-                    <td className="border px-2 py-1 text-center">{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="text-cosmic-gold font-semibold text-base text-center mb-1 mt-3">Bottom 5 (Sales)</div>
-            <table className="w-full border text-xs bg-white text-black rounded">
-              <thead>
-                <tr>
-                  <th className="border px-2 py-1">Product</th>
-                  <th className="border px-2 py-1">Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bottomSales.map(p => (
-                  <tr key={p.name}>
-                    <td className="border px-2 py-1">{p.name}</td>
-                    <td className="border px-2 py-1 text-center">{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  });
-
-  // PDF export (new: all content as text/tables for clean report)
-  const handleDownloadPdf = async () => {
-    if (visibleReportType === "none") return;
-    setExporting(true);
-
-    try {
-      const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 64;
-
-      // 1. Title Heading
-      doc.setFontSize(22);
-      doc.setTextColor("#1566B8");
-      doc.text(pdfTitle, pageWidth / 2, y, { align: "center" });
-      y += 26;
-
-      // 2. Date
-      doc.setFontSize(13);
-      doc.setTextColor(40);
-      doc.text(getTodayDisplay(), pageWidth / 2, y, { align: "center" });
-      y += 14;
-
-      // 3. Subtitle (month or year)
-      doc.setFontSize(15);
-      doc.setTextColor("#AA8500");
-      doc.text(pdfSubTitle, pageWidth / 2, y, { align: "center" });
-      y += 30;
-
-      // 4. Top 5 & Bottom 5 - Quantity
-      doc.setFontSize(14);
-      doc.setTextColor("#1566B8");
-      doc.text("Top 5 Products (Quantity)", 55, y);
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y + 8,
-        head: [["#", "Product", "Quantity"]],
-        body: topQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
-        styles: { fontSize: 10 },
-        theme: "grid",
-        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
-        margin: { left: 55, right: 55 },
-        tableWidth: pageWidth - 110,
-      });
-      y = doc.lastAutoTable.finalY + 10;
-
-      doc.setTextColor("#1566B8");
-      doc.text("Bottom 5 Products (Quantity)", 55, y);
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y + 8,
-        head: [["#", "Product", "Quantity"]],
-        body: bottomQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
-        styles: { fontSize: 10 },
-        theme: "grid",
-        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
-        margin: { left: 55, right: 55 },
-        tableWidth: pageWidth - 110,
-      });
-      y = doc.lastAutoTable.finalY + 20;
-
-      // 5. Top 5 & Bottom 5 - Sales
-      doc.setFontSize(14);
-      doc.setTextColor("#AA8500");
-      doc.text("Top 5 Products (Sales)", 55, y);
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y + 8,
-        head: [["#", "Product", "Sales"]],
-        body: topSales.map((p, idx) => [idx + 1, p.name, p.value]),
-        styles: { fontSize: 10 },
-        theme: "grid",
-        headStyles: { fillColor: [170,133,0], textColor: "#fff" },
-        margin: { left: 55, right: 55 },
-        tableWidth: pageWidth - 110,
-      });
-      y = doc.lastAutoTable.finalY + 10;
-
-      doc.setTextColor("#AA8500");
-      doc.text("Bottom 5 Products (Sales)", 55, y);
-      doc.setTextColor(0);
-      autoTable(doc, {
-        startY: y + 8,
-        head: [["#", "Product", "Sales"]],
-        body: bottomSales.map((p, idx) => [idx + 1, p.name, p.value]),
-        styles: { fontSize: 10 },
-        theme: "grid",
-        headStyles: { fillColor: [170,133,0], textColor: "#fff" },
-        margin: { left: 55, right: 55 },
-        tableWidth: pageWidth - 110,
-      });
-      y = doc.lastAutoTable.finalY + 24;
-
-      // 6. Summary Table (as table)
-      doc.setFontSize(15);
-      doc.setTextColor("#1566B8");
-      doc.text("Sales & Quantity Summary Table", 55, y);
-      doc.setTextColor(20);
-      autoTable(doc, {
-        startY: y + 8,
-        head: [["#", "Product", "Quantity", "Sales"]],
-        body: summaryTableData.map((row, idx) => [
-          idx + 1,
-          row.name,
-          row.quantity,
-          row.sales
-        ]),
-        styles: { fontSize: 11 },
-        theme: "grid",
-        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
-        margin: { left: 55, right: 55 },
-        tableWidth: pageWidth - 110,
-      });
-
-      // Save
-      doc.save(
-        visibleReportType === "monthly"
-          ? `Summary_${pdfMonth}-${pdfYear}.pdf`
-          : `Summary_${pdfYear}.pdf`
-      );
-    } catch (e) {
-      console.error("PDF Export error:", e);
-      alert("PDF Export failed. Please retry.");
-    } finally {
-      setExporting(false);
-      setExportAreaVisible(false);
-    }
-  };
+  // Compose PDF export callback (just curried for easy use)
+  const handlePdfExport = () =>
+    handleDownloadPdf({
+      visibleReportType,
+      pdfTitle,
+      pdfSubTitle,
+      topQuantity,
+      bottomQuantity,
+      topSales,
+      bottomSales,
+      summaryTableData,
+      pdfMonth,
+      pdfYear,
+      setExporting,
+    });
 
   // Access control
   const { accessLevel, setLevel } = useSessionAccess();
@@ -385,7 +193,7 @@ export default function Summary() {
             onMonthly={() => setVisibleReportType("monthly")}
             onAnnual={() => setVisibleReportType("annual")}
             exporting={exporting}
-            onDownload={handleDownloadPdf}
+            onDownload={handlePdfExport}
             visibleReportType={visibleReportType}
           />
           {/* ---- REVERT TO ORIGINAL UI FOR TOP/BOTTOM 5 ---- */}
@@ -424,8 +232,13 @@ export default function Summary() {
               }}
             >
               {/* Top/Bottom 5 compact tables (used for PDF rendering) */}
-              <div ref={summaryMatrixRef}>
-                <CompactTopBottomTable />
+              <div>
+                <CompactTopBottomTable
+                  topQuantity={topQuantity}
+                  bottomQuantity={bottomQuantity}
+                  topSales={topSales}
+                  bottomSales={bottomSales}
+                />
               </div>
               {/* Summary Table (in larger area to avoid cropping) */}
               <div ref={summaryTableRef}>
