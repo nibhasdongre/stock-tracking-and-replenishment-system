@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AccessLevel } from "@/hooks/useSessionAccess";
 
-const ACCESS_PASSWORDS: Record<AccessLevel, string> = {
-  none: "",
+const ACCESS_PASSWORDS: { [level in Exclude<AccessLevel, "none">]: string } = {
   L1: "l1pass",
   L2: "l2pass",
   L3: "l3pass",
@@ -14,16 +13,21 @@ const ACCESS_PASSWORDS: Record<AccessLevel, string> = {
 type Props = { onSuccess: (level: AccessLevel) => void };
 
 export default function AccessLoginForm({ onSuccess }: Props) {
-  const [access, setAccess] = useState<AccessLevel>("L1");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Infer access level from password, highest privilege takes precedence
+    let matchedLevel: AccessLevel | null = null;
+    // Check L3 first, then L2, then L1
+    if (password === ACCESS_PASSWORDS.L3) matchedLevel = "L3";
+    else if (password === ACCESS_PASSWORDS.L2) matchedLevel = "L2";
+    else if (password === ACCESS_PASSWORDS.L1) matchedLevel = "L1";
 
-    if (password === ACCESS_PASSWORDS[access]) {
+    if (matchedLevel) {
       setError(null);
-      onSuccess(access);
+      onSuccess(matchedLevel);
     } else {
       setError("Incorrect password. Please try again.");
     }
@@ -31,41 +35,6 @@ export default function AccessLoginForm({ onSuccess }: Props) {
 
   return (
     <form className="flex flex-col gap-4 items-center w-full" onSubmit={handleSubmit}>
-      <div className="flex gap-4 mb-1">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="access"
-            value="L1"
-            checked={access === "L1"}
-            onChange={() => setAccess("L1")}
-            className="accent-cosmic-blue"
-          />
-          View Only (L1)
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="access"
-            value="L2"
-            checked={access === "L2"}
-            onChange={() => setAccess("L2")}
-            className="accent-cosmic-cyan"
-          />
-          Update (L2)
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            name="access"
-            value="L3"
-            checked={access === "L3"}
-            onChange={() => setAccess("L3")}
-            className="accent-cosmic-gold"
-          />
-          Admin (L3)
-        </label>
-      </div>
       <Input
         type="password"
         required
