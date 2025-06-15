@@ -224,72 +224,137 @@ export default function Summary() {
     );
   });
 
-  // PDF export
+  // PDF export (revert styling, ensure full image capture of all charts/tables)
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
     setExporting(true);
-    setExportAreaVisible(true); // Make refs visible for canvas capture!
-    await new Promise(r => setTimeout(r, 170)); // Allow hidden DOM to render
-
+    setExportAreaVisible(true);
+    await new Promise((r) => setTimeout(r, 200)); // Ensure everything renders
     try {
       const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
-      // const pageHeight = doc.internal.pageSize.getHeight();
-      let y = 40;
+      let y = 50;
 
-      // Title
-      doc.setFontSize(18);
+      doc.setFontSize(20);
       doc.setTextColor("#1566B8");
       doc.text(pdfTitle, pageWidth / 2, y, { align: "center" });
-      y += 26;
-      doc.setFontSize(11);
+      y += 24;
+      doc.setFontSize(12);
       doc.setTextColor("#222");
       doc.text(getTodayDisplay(), pageWidth / 2, y, { align: "center" });
       y += 18;
-      doc.setFontSize(13);
+      doc.setFontSize(14);
       doc.text(pdfSubTitle, pageWidth / 2, y, { align: "center" });
-      y += 24;
+      y += 30;
 
-      // Compact Top/Bottom 5 tables (quantity & sales)
+      // --- Top + Bottom 5 tables ---
       if (summaryMatrixRef.current) {
-        y = await renderAndAdd(doc, summaryMatrixRef.current, "Top 5 & Bottom 5 Products (Table)", pageWidth-80, 220, y, {center:true});
+        y = await renderAndAdd(
+          doc,
+          summaryMatrixRef.current,
+          "Top 5 & Bottom 5 Products (Table)",
+          pageWidth - 80,
+          220,
+          y,
+          { center: true }
+        );
       }
 
-      // Summary Table (full size, uncropped)
+      // --- Summary Table (spread wide, uncropped) ---
       if (summaryTableRef.current) {
-        y = await renderAndAdd(doc, summaryTableRef.current, "Summary Table", pageWidth-80, 200, y, {center:true});
+        y = await renderAndAdd(
+          doc,
+          summaryTableRef.current,
+          "Summary Table",
+          pageWidth - 60,
+          240,
+          y,
+          { center: true }
+        );
       }
 
-      // New: Add visualizations for both "By Sales" and "By Quantity" with headings, one per page as needed
-      // Pie (Quantity)
+      // --- Visualizations ---
+      const VIZ_EXPORT_WIDTH = 670;
+      const VIZ_EXPORT_HEIGHT = 335;
+      // Pie/Bar/Line (Quantity)
       if (pieQuantityRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, pieQuantityRef.current, "Pie Chart: By Quantity", 460, 270, vizY, {center: true});
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          pieQuantityRef.current,
+          "Visualization: By Quantity (Pie Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
       }
-      // Pie (Sales)
-      if (pieSalesRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, pieSalesRef.current, "Pie Chart: By Sales", 460, 270, vizY, {center: true});
-      }
-      // Bar (Quantity)
       if (barQuantityRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, barQuantityRef.current, "Bar Chart: By Quantity", 460, 270, vizY, {center: true});
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          barQuantityRef.current,
+          "Visualization: By Quantity (Bar Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
       }
-      // Bar (Sales)
-      if (barSalesRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, barSalesRef.current, "Bar Chart: By Sales", 460, 270, vizY, {center: true});
-      }
-      // Line (Quantity)
       if (lineQuantityRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, lineQuantityRef.current, "Line Chart: By Quantity", 670, 285, vizY, {center: true});
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          lineQuantityRef.current,
+          "Visualization: By Quantity (Line Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
       }
-      // Line (Sales)
+      // Pie/Bar/Line (Sales)
+      if (pieSalesRef.current) {
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          pieSalesRef.current,
+          "Visualization: By Sales (Pie Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
+      }
+      if (barSalesRef.current) {
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          barSalesRef.current,
+          "Visualization: By Sales (Bar Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
+      }
       if (lineSalesRef.current) {
-        doc.addPage(); let vizY = 60;
-        vizY = await renderAndAdd(doc, lineSalesRef.current, "Line Chart: By Sales", 670, 285, vizY, {center: true});
+        doc.addPage();
+        let vizY = 60;
+        vizY = await renderAndAdd(
+          doc,
+          lineSalesRef.current,
+          "Visualization: By Sales (Line Chart)",
+          VIZ_EXPORT_WIDTH,
+          VIZ_EXPORT_HEIGHT,
+          vizY,
+          { center: true }
+        );
       }
 
       doc.save(
