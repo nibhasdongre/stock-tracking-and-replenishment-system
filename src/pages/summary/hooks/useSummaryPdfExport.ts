@@ -1,4 +1,3 @@
-
 import { useCallback, useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -69,7 +68,7 @@ export function useSummaryPdfExport() {
         doc.setTextColor("#1566B8");
         doc.text("Top 5 Products (Quantity)", 55, y);
         doc.setTextColor(0);
-        const topQuantityTable = autoTable(doc, {
+        autoTable(doc, {
           startY: y + 8,
           head: [["#", "Product", "Quantity"]],
           body: topQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
@@ -79,12 +78,12 @@ export function useSummaryPdfExport() {
           margin: { left: 55, right: 55 },
           tableWidth: pageWidth - 110,
         });
-        y = (topQuantityTable?.finalY ?? y) + 10;
+        y += 90; // Empirically determined suitable vertical offset
 
         doc.setTextColor("#1566B8");
         doc.text("Bottom 5 Products (Quantity)", 55, y);
         doc.setTextColor(0);
-        const bottomQuantityTable = autoTable(doc, {
+        autoTable(doc, {
           startY: y + 8,
           head: [["#", "Product", "Quantity"]],
           body: bottomQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
@@ -94,14 +93,14 @@ export function useSummaryPdfExport() {
           margin: { left: 55, right: 55 },
           tableWidth: pageWidth - 110,
         });
-        y = (bottomQuantityTable?.finalY ?? y) + 20;
+        y += 90;
 
         // 5. Top 5 & Bottom 5 - Sales
         doc.setFontSize(14);
         doc.setTextColor("#AA8500");
         doc.text("Top 5 Products (Sales)", 55, y);
         doc.setTextColor(0);
-        const topSalesTable = autoTable(doc, {
+        autoTable(doc, {
           startY: y + 8,
           head: [["#", "Product", "Sales"]],
           body: topSales.map((p, idx) => [idx + 1, p.name, p.value]),
@@ -111,12 +110,12 @@ export function useSummaryPdfExport() {
           margin: { left: 55, right: 55 },
           tableWidth: pageWidth - 110,
         });
-        y = (topSalesTable?.finalY ?? y) + 10;
+        y += 90;
 
         doc.setTextColor("#AA8500");
         doc.text("Bottom 5 Products (Sales)", 55, y);
         doc.setTextColor(0);
-        const bottomSalesTable = autoTable(doc, {
+        autoTable(doc, {
           startY: y + 8,
           head: [["#", "Product", "Sales"]],
           body: bottomSales.map((p, idx) => [idx + 1, p.name, p.value]),
@@ -126,7 +125,7 @@ export function useSummaryPdfExport() {
           margin: { left: 55, right: 55 },
           tableWidth: pageWidth - 110,
         });
-        y = (bottomSalesTable?.finalY ?? y) + 24;
+        y += 100;
 
         // 6. Summary Table (as table)
         doc.setFontSize(15);
