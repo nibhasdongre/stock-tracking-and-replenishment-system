@@ -14,6 +14,7 @@ import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
+import autoTable from "jspdf-autotable";
 
 export default function Summary() {
   const now = new Date();
@@ -224,139 +225,120 @@ export default function Summary() {
     );
   });
 
-  // PDF export (revert styling, ensure full image capture of all charts/tables)
+  // PDF export (new: all content as text/tables for clean report)
   const handleDownloadPdf = async () => {
     if (visibleReportType === "none") return;
     setExporting(true);
-    setExportAreaVisible(true);
-    await new Promise((r) => setTimeout(r, 200)); // Ensure everything renders
+
     try {
       const doc = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 50;
+      let y = 64;
 
-      doc.setFontSize(20);
+      // 1. Title Heading
+      doc.setFontSize(22);
       doc.setTextColor("#1566B8");
       doc.text(pdfTitle, pageWidth / 2, y, { align: "center" });
-      y += 24;
-      doc.setFontSize(12);
-      doc.setTextColor("#222");
+      y += 26;
+
+      // 2. Date
+      doc.setFontSize(13);
+      doc.setTextColor(40);
       doc.text(getTodayDisplay(), pageWidth / 2, y, { align: "center" });
-      y += 18;
-      doc.setFontSize(14);
+      y += 14;
+
+      // 3. Subtitle (month or year)
+      doc.setFontSize(15);
+      doc.setTextColor("#AA8500");
       doc.text(pdfSubTitle, pageWidth / 2, y, { align: "center" });
       y += 30;
 
-      // --- Top + Bottom 5 tables ---
-      if (summaryMatrixRef.current) {
-        y = await renderAndAdd(
-          doc,
-          summaryMatrixRef.current,
-          "Top 5 & Bottom 5 Products (Table)",
-          pageWidth - 80,
-          220,
-          y,
-          { center: true }
-        );
-      }
+      // 4. Top 5 & Bottom 5 - Quantity
+      doc.setFontSize(14);
+      doc.setTextColor("#1566B8");
+      doc.text("Top 5 Products (Quantity)", 55, y);
+      doc.setTextColor(0);
+      autoTable(doc, {
+        startY: y + 8,
+        head: [["#", "Product", "Quantity"]],
+        body: topQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
+        styles: { fontSize: 10 },
+        theme: "grid",
+        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
+        margin: { left: 55, right: 55 },
+        tableWidth: pageWidth - 110,
+      });
+      y = doc.lastAutoTable.finalY + 10;
 
-      // --- Summary Table (spread wide, uncropped) ---
-      if (summaryTableRef.current) {
-        y = await renderAndAdd(
-          doc,
-          summaryTableRef.current,
-          "Summary Table",
-          pageWidth - 60,
-          240,
-          y,
-          { center: true }
-        );
-      }
+      doc.setTextColor("#1566B8");
+      doc.text("Bottom 5 Products (Quantity)", 55, y);
+      doc.setTextColor(0);
+      autoTable(doc, {
+        startY: y + 8,
+        head: [["#", "Product", "Quantity"]],
+        body: bottomQuantity.map((p, idx) => [idx + 1, p.name, p.value]),
+        styles: { fontSize: 10 },
+        theme: "grid",
+        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
+        margin: { left: 55, right: 55 },
+        tableWidth: pageWidth - 110,
+      });
+      y = doc.lastAutoTable.finalY + 20;
 
-      // --- Visualizations ---
-      const VIZ_EXPORT_WIDTH = 670;
-      const VIZ_EXPORT_HEIGHT = 335;
-      // Pie/Bar/Line (Quantity)
-      if (pieQuantityRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          pieQuantityRef.current,
-          "Visualization: By Quantity (Pie Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
-      if (barQuantityRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          barQuantityRef.current,
-          "Visualization: By Quantity (Bar Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
-      if (lineQuantityRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          lineQuantityRef.current,
-          "Visualization: By Quantity (Line Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
-      // Pie/Bar/Line (Sales)
-      if (pieSalesRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          pieSalesRef.current,
-          "Visualization: By Sales (Pie Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
-      if (barSalesRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          barSalesRef.current,
-          "Visualization: By Sales (Bar Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
-      if (lineSalesRef.current) {
-        doc.addPage();
-        let vizY = 60;
-        vizY = await renderAndAdd(
-          doc,
-          lineSalesRef.current,
-          "Visualization: By Sales (Line Chart)",
-          VIZ_EXPORT_WIDTH,
-          VIZ_EXPORT_HEIGHT,
-          vizY,
-          { center: true }
-        );
-      }
+      // 5. Top 5 & Bottom 5 - Sales
+      doc.setFontSize(14);
+      doc.setTextColor("#AA8500");
+      doc.text("Top 5 Products (Sales)", 55, y);
+      doc.setTextColor(0);
+      autoTable(doc, {
+        startY: y + 8,
+        head: [["#", "Product", "Sales"]],
+        body: topSales.map((p, idx) => [idx + 1, p.name, p.value]),
+        styles: { fontSize: 10 },
+        theme: "grid",
+        headStyles: { fillColor: [170,133,0], textColor: "#fff" },
+        margin: { left: 55, right: 55 },
+        tableWidth: pageWidth - 110,
+      });
+      y = doc.lastAutoTable.finalY + 10;
 
+      doc.setTextColor("#AA8500");
+      doc.text("Bottom 5 Products (Sales)", 55, y);
+      doc.setTextColor(0);
+      autoTable(doc, {
+        startY: y + 8,
+        head: [["#", "Product", "Sales"]],
+        body: bottomSales.map((p, idx) => [idx + 1, p.name, p.value]),
+        styles: { fontSize: 10 },
+        theme: "grid",
+        headStyles: { fillColor: [170,133,0], textColor: "#fff" },
+        margin: { left: 55, right: 55 },
+        tableWidth: pageWidth - 110,
+      });
+      y = doc.lastAutoTable.finalY + 24;
+
+      // 6. Summary Table (as table)
+      doc.setFontSize(15);
+      doc.setTextColor("#1566B8");
+      doc.text("Sales & Quantity Summary Table", 55, y);
+      doc.setTextColor(20);
+      autoTable(doc, {
+        startY: y + 8,
+        head: [["#", "Product", "Quantity", "Sales"]],
+        body: summaryTableData.map((row, idx) => [
+          idx + 1,
+          row.name,
+          row.quantity,
+          row.sales
+        ]),
+        styles: { fontSize: 11 },
+        theme: "grid",
+        headStyles: { fillColor: [21,102,184], textColor: "#fff" },
+        margin: { left: 55, right: 55 },
+        tableWidth: pageWidth - 110,
+      });
+
+      // Save
       doc.save(
         visibleReportType === "monthly"
           ? `Summary_${pdfMonth}-${pdfYear}.pdf`
