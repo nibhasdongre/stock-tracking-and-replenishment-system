@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import StarBackground from "@/components/StarBackground";
 import { Rocket, Star } from "lucide-react";
 import PasswordGate from "@/components/PasswordGate";
+import InvalidRequestDialog from "@/components/InvalidRequestDialog";
 
 export default function MonthSelector() {
   const now = new Date();
@@ -13,6 +15,7 @@ export default function MonthSelector() {
   const [mm, setMm] = useState(() => String(now.getMonth() + 1).padStart(2, "0"));
   const [yyyy, setYyyy] = useState(() => String(currentYear));
   const [touched, setTouched] = useState(false);
+  const [invalidDialogOpen, setInvalidDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   // Allowed range for year
@@ -104,11 +107,16 @@ export default function MonthSelector() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate("/summary")}
+                onClick={() => setInvalidDialogOpen(true)}
                 className="w-1/2 border-cosmic-gold text-cosmic-gold"
+                type="button"
               >
                 Summarize
               </Button>
+              <InvalidRequestDialog
+                open={invalidDialogOpen}
+                onOpenChange={setInvalidDialogOpen}
+              />
             </div>
           </div>
         </div>
