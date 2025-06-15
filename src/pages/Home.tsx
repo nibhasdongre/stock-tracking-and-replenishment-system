@@ -1,22 +1,21 @@
 
 import StarBackground from "@/components/StarBackground";
-import VisualBackground from "@/components/VisualBackground";
-import LoginButton from "@/components/LoginButton";
+import AccessLoginForm from "@/components/AccessLoginForm";
+import { useSessionAccess } from "@/hooks/useSessionAccess";
 import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const { setLevel } = useSessionAccess();
   const navigate = useNavigate();
 
-  function handleLogin() {
-    // Simulated authentication: redirect to Page 2
+  function handleLogin(accessLevel: "L1" | "L2" | "L3") {
+    setLevel(accessLevel);
     navigate("/month");
   }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
       <StarBackground />
-      {/* VisualBackground can add extra subtle space effect on top of the stars if desired, or comment out for simplicity */}
-      {/* <VisualBackground /> */}
       <div className="relative z-10 flex flex-col items-center bg-black/70 rounded-xl shadow-xl px-8 py-12 backdrop-blur w-full max-w-md mx-auto border border-cosmic-blue animate-fade-in">
         <h1 className="text-4xl font-bold mb-4 text-cosmic-blue text-center">
           Stock Replenishment & Tracking System
@@ -30,7 +29,7 @@ export default function Home() {
             The modern solution for stock management with monthly analysis, edits, and more.
           </span>
         </p>
-        <LoginButton onLogin={handleLogin} />
+        <AccessLoginForm onSuccess={handleLogin} />
       </div>
     </div>
   );
