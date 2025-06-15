@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -93,7 +92,12 @@ export default function CurrentMonthTable() {
       setShowInvalid(true);
       return;
     }
-    setL2Prompt(true);
+    // If already L2 or L3, go directly to date dialog, else prompt for L2
+    if (accessLevel === "L2" || accessLevel === "L3") {
+      setDateDialog(true);
+    } else {
+      setL2Prompt(true);
+    }
   }
 
   function handleL2Close(allowed: boolean) {
