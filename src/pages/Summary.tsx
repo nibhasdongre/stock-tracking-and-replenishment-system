@@ -406,9 +406,14 @@ export default function Summary() {
             onDownload={handleDownloadPdf}
             visibleReportType={visibleReportType}
           />
-          <div ref={summaryMatrixRef}>
-            <CompactTopBottomTable />
-          </div>
+          {/* ---- REVERT TO ORIGINAL UI FOR TOP/BOTTOM 5 ---- */}
+          <SummaryMatrix
+            topQuantity={topQuantity}
+            bottomQuantity={bottomQuantity}
+            topSales={topSales}
+            bottomSales={bottomSales}
+          />
+          {/* ---- END ORIGINAL UI ---- */}
           {visibleReportType !== "none" && (
             <div className="mt-8" ref={summaryTableRef}>
               <SummaryTable
