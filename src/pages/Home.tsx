@@ -29,19 +29,17 @@ export default function Home() {
           STARS
         </div>
         <p className="text-lg text-slate-200 mb-8 text-center">
-          Moitor. Track. Replenish. Inventory Management made Intelligent. <br />
-          <span className="opacity-60 text-base">
-            What You’ll Love About This System :
-📊 Automated Stock SummariesF
-⚠️ Smart Replenishment Alerts
-🧠 Intelligent Threshold Detection
-📈 Visual Inventory Insights
-🔄 Effortless Stock Carryover
-🔍 Instant Product Search & Month Filtering
-🔐 Secure, Organized Storage
-
-          </span>
-        </p>
+ Monitor. Track. Replenish. Inventory Management made Intelligent.<br />
+  <span className="opacity-60 text-base block whitespace-pre-line mt-4">
+    📊 Automated Stock Summaries{'\n'}
+    ⚠️ Smart Replenishment Alerts{'\n'}
+    🧠 Intelligent Threshold Detection{'\n'}
+    📈 Visual Inventory Insights{'\n'}
+    🔄 Effortless Stock Carryover{'\n'}
+    🔍 Instant Product Search & Month Filtering{'\n'}
+    🔐 Secure, Organized Storage
+  </span>
+          </p>
         <AccessLoginForm onSuccess={handleLogin} />
       </div>
     </div>
