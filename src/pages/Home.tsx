@@ -29,7 +29,7 @@ export default function Home() {
           STARS
         </div>
         <p className="text-lg text-slate-200 mb-8 text-center">
-          Moitor. Track. Replenish. Inventory Management made Intelligent. br />
+          Moitor. Track. Replenish. Inventory Management made Intelligent. <br />
           <span className="opacity-60 text-base">
             What You’ll Love About This System :
 📊 Automated Stock SummariesF
