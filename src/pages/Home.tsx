@@ -23,15 +23,23 @@ export default function Home() {
       <StarBackground />
       <div className="relative z-10 flex flex-col items-center bg-black/70 rounded-xl shadow-xl px-8 py-12 backdrop-blur w-full max-w-md mx-auto border border-cosmic-blue animate-fade-in">
         <h1 className="text-4xl font-bold mb-4 text-cosmic-blue text-center">
-          Stock Tracking and Replenishment  System
+          Stock Tracking and Replenishment System
         </h1>
         <div className="uppercase mb-2 tracking-widest text-cosmic-gold font-semibold text-base opacity-85">
           STARS
         </div>
         <p className="text-lg text-slate-200 mb-8 text-center">
-          Monitor, replenish, and track your inventory efficiently.<br />
+          Moitor. Track. Replenish. Inventory Management made Intelligent. br />
           <span className="opacity-60 text-base">
-            The modern solution for stock management with monthly analysis, edits, and more.
+            What You’ll Love About This System :
+📊 Automated Stock SummariesF
+⚠️ Smart Replenishment Alerts
+🧠 Intelligent Threshold Detection
+📈 Visual Inventory Insights
+🔄 Effortless Stock Carryover
+🔍 Instant Product Search & Month Filtering
+🔐 Secure, Organized Storage
+
           </span>
         </p>
         <AccessLoginForm onSuccess={handleLogin} />
