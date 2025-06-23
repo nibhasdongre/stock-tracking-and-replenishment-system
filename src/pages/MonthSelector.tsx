@@ -50,7 +50,7 @@ export default function MonthSelector() {
           <span className="mb-2 flex items-center gap-2 text-center mx-auto text-cosmic-gold">
             <Rocket size={26} className="mr-1" />
             <h2 className="text-2xl sm:text-3xl font-bold tracking-wider uppercase font-sans inline-block" style={{letterSpacing:"0.12em"}}>
-              Stock Replenishment & Tracking System
+              Stock Tracking & Replenishment System
             </h2>
             <Star className="ml-2" size={19} />
           </span>
