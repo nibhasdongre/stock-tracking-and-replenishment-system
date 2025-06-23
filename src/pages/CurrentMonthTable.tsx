@@ -52,7 +52,7 @@ export default function CurrentMonthTable() {
   // L2 or L3 required for update
   const canEdit = accessLevel === "L2" || accessLevel === "L3";
   // Enable Save if update UI is showing for any row and date is picked
-  const saveEnabled = updating && stockRow !== null && selectedDate !== null;
+  const saveEnabled = updating &&  selectedDate !== null;
 
   // Session region logic
   const { region } = useSessionRegion();
